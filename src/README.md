@@ -1,5 +1,5 @@
 # OthelloAI Dojo
-This project is being maintained by  IEEE Information Theory Society . VIT Vellore Chapter.
+
 Welcome to the OthelloAI Dojo! This is a modern, interactive web application built with Next.js that allows users to play the classic game of Othello (also known as Reversi) against an AI opponent. The application serves as a demonstration of how modern AI and web technologies can be combined to create engaging, intelligent experiences. Users can not only play the game but also learn from the AI by requesting move suggestions and visualizing its decision-making process.
 
 ## Features

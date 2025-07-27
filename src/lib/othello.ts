@@ -1,4 +1,4 @@
-import type { BoardState, CellState, Player } from '@/types/othello';
+import type { BoardState, Player } from '@/types/othello';
 
 const BOARD_SIZE = 8;
 const DIRECTIONS = [
@@ -23,7 +23,7 @@ function isInsideBoard(row: number, col: number): boolean {
 }
 
 function getFlipsForMove(board: BoardState, player: Player, row: number, col: number): {row: number, col: number}[] {
-    if (board[row][col] !== 'empty') {
+    if (!isInsideBoard(row, col) || board[row][col] !== 'empty') {
       return [];
     }
   
@@ -41,7 +41,7 @@ function getFlipsForMove(board: BoardState, player: Player, row: number, col: nu
         c += dc;
       }
   
-      if (isInsideBoard(r, c) && board[r][c] === player) {
+      if (isInsideBoard(r, c) && board[r][c] === player && potentialFlips.length > 0) {
         tilesToFlip.push(...potentialFlips);
       }
     }
@@ -67,10 +67,14 @@ export function getValidMoves(board: BoardState, player: Player): {row: number, 
 }
 
 export function applyMove(board: BoardState, player: Player, row: number, col: number): BoardState {
-  const newBoard = board.map(r => [...r]) as BoardState;
   const tilesToFlip = getFlipsForMove(board, player, row, col);
+  
+  if (tilesToFlip.length === 0) {
+      // This is not a valid move, return the original board
+      return board;
+  }
 
-  if (tilesToFlip.length === 0 && board[row][col] === 'empty') return board;
+  const newBoard = board.map(r => [...r]) as BoardState;
 
   newBoard[row][col] = player;
   tilesToFlip.forEach(tile => {
