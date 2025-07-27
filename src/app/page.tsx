@@ -26,6 +26,7 @@ export default function Home() {
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
   const [aiIsThinking, setAiIsThinking] = useState(false);
   const [difficulty, setDifficulty] = useState(1); // 1: Easy, 3: Medium, 5: Hard
+  const [lastMove, setLastMove] = useState<Move | null>(null);
   
   const [suggestion, setSuggestion] = useState<SuggestGoodMovesOutput | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
@@ -74,6 +75,7 @@ export default function Home() {
 
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
     setBoard(newBoard);
+    setLastMove(move);
     setCurrentPlayer(getOpponent(currentPlayer));
     setSuggestion(null); // Clear suggestion after move
   };
@@ -85,6 +87,7 @@ export default function Home() {
     setGameState('playing');
     setSuggestion(null);
     setVisualization(null);
+    setLastMove(null);
   };
   
   const handleSuggestMove = async (retries = 2) => {
@@ -188,6 +191,7 @@ export default function Home() {
           if(bestMove){
             const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
             setBoard(newBoard);
+            setLastMove(bestMove);
             setCurrentPlayer(userPlayer);
           }
         }
@@ -262,6 +266,7 @@ export default function Home() {
             validMoves={currentPlayer === userPlayer ? validMoves : []}
             player={userPlayer}
             suggestedMove={suggestion?.move ?? null}
+            lastMove={lastMove}
           />
         </div>
         

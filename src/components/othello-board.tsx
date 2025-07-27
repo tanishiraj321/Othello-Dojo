@@ -17,6 +17,7 @@ interface OthelloBoardProps {
   validMoves: Move[];
   player: Player;
   suggestedMove: Move | null;
+  lastMove: Move | null;
 }
 
 const GridLabel = ({ label }: { label: string }) => (
@@ -25,7 +26,7 @@ const GridLabel = ({ label }: { label: string }) => (
     </div>
 )
 
-export default function OthelloBoard({ board, onCellClick, validMoves, suggestedMove }: OthelloBoardProps) {
+export default function OthelloBoard({ board, onCellClick, validMoves, suggestedMove, lastMove }: OthelloBoardProps) {
   const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   return (
     <div className="w-full max-w-2xl mx-auto aspect-square">
@@ -45,6 +46,7 @@ export default function OthelloBoard({ board, onCellClick, validMoves, suggested
                     row.map((cell, colIndex) => {
                     const isMoveValid = validMoves.some(m => m.row === rowIndex && m.col === colIndex);
                     const isSuggestedMove = suggestedMove && suggestedMove.row === rowIndex && suggestedMove.col === colIndex;
+                    const isLastMove = lastMove && lastMove.row === rowIndex && lastMove.col === colIndex;
                     return (
                         <div
                         key={`${rowIndex}-${colIndex}`}
@@ -54,14 +56,19 @@ export default function OthelloBoard({ board, onCellClick, validMoves, suggested
                         )}
                         onClick={() => onCellClick({ row: rowIndex, col: colIndex })}
                         >
-                        {isSuggestedMove && (
-                          <div className="absolute inset-0 bg-red-500/50 rounded-full animate-pulse" />
-                        )}
-                        {cell === 'black' && <BlackPiece />}
-                        {cell === 'white' && <WhitePiece />}
-                        {cell === 'empty' && isMoveValid && (
-                            <div className="w-1/3 h-1/3 bg-primary/50 rounded-full" />
-                        )}
+                        <div className="relative w-full h-full flex items-center justify-center">
+                            {cell === 'black' && <BlackPiece />}
+                            {cell === 'white' && <WhitePiece />}
+                            {cell === 'empty' && isMoveValid && (
+                                <div className="w-1/3 h-1/3 bg-primary/50 rounded-full" />
+                            )}
+                            {isSuggestedMove && (
+                                <div className="absolute inset-0 bg-red-500/50 rounded-full animate-pulse" />
+                            )}
+                            {isLastMove && (
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                            )}
+                        </div>
                         </div>
                     );
                     })
