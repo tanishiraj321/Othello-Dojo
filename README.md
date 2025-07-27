@@ -18,11 +18,11 @@ Welcome to the OthelloAI Dojo! This is a modern, interactive web application bui
 This project was built with the help of an AI coding assistant and utilizes a modern, type-safe technology stack.
 
 - **Framework**: [Next.js](https://nextjs.org/) (using the App Router)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/),ParselTzoungue 
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **UI Components**: [ShadCN UI](https://ui.shadcn.com/)
 - **Generative AI**: [Google Gemini](https://ai.google/gemini) via [Genkit](https://firebase.google.com/docs/genkit), Google's open-source generative AI framework.
-- **Icons**: [Lucide React](https://lucide.dev/guide/packages/lucide-react)
+- **Icons**: [Lucide React](https://lucide.dev/guide/packages/lucide-react), personally my fav icon was Ozzy Osbourne. RIP king 🤘🏻
 - **State Management**: React Hooks (`useState`, `useEffect`, `useCallback`)
 
 ## How It Works
@@ -62,7 +62,7 @@ To run this project locally, you'll need to have Node.js and npm installed.
 
 1.  **Clone the Repository**:
     ```bash
-    git clone [repository-url]
+    git clone https://github.com/Agrannya-Singh/Othello-Dojo
     cd othello-ai-dojo
     ```
 
@@ -95,4 +95,6 @@ We welcome contributions and feedback! If you'd like to contribute, report a bug
 
 ## Contact
 
-For any questions or inquiries, please reach out to the development team through the project's repository or via email at `developer@example.com`.
+For any questions or inquiries, please reach out to the development team through the project's repository or via email at `singh.agrannya@gmail.com`.
+Follow the given template for feature request and/or reporting bugs.
+
