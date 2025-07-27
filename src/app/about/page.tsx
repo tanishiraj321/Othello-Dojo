@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BrainCircuit, Code, Users, ExternalLink, BookOpen } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, Code, Users, ExternalLink, BookOpen, BarChart, HelpCircle } from 'lucide-react';
 
 export default function AboutPage() {
   return (
@@ -53,6 +53,27 @@ export default function AboutPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl">
+              <BookOpen className="w-6 h-6 text-primary" />
+              Guides & Documentation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-muted-foreground">
+            <Button asChild variant="outline">
+                <Link href="/how-to-use" className="flex items-center">
+                    <HelpCircle className="w-4 h-4 mr-2" /> How to Use This App
+                </Link>
+            </Button>
+            <Button asChild variant="outline">
+                <Link href="/win-rate-guide" className="flex items-center">
+                    <BarChart className="w-4 h-4 mr-2" /> Understanding the Win-Rate Chart
+                </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
               <Code className="w-6 h-6 text-primary" />
               Technology Stack
             </CardTitle>
@@ -73,11 +94,11 @@ export default function AboutPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl">
-              <BookOpen className="w-6 h-6 text-primary" />
+              <ExternalLink className="w-6 h-6 text-primary" />
               Resources & Further Reading
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-muted-foreground">
+          <CardContent className="space-y-3">
               <a href="https://en.wikipedia.org/wiki/Reversi" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
                   <ExternalLink className="w-4 h-4 mr-2" /> Othello (Reversi) on Wikipedia
               </a>
