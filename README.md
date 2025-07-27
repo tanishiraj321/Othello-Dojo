@@ -1,5 +1,7 @@
 # OthelloAI Dojo
-This project is being maintained by  IEEE Information Theory Society . VIT Vellore Chapter.
+
+-**This project is being maintained by  IEEE Information Theory Society . VIT Vellore Chapter.**
+
 Welcome to the OthelloAI Dojo! This is a modern, interactive web application built with Next.js that allows users to play the classic game of Othello (also known as Reversi) against an AI opponent. The application serves as a demonstration of how modern AI and web technologies can be combined to create engaging, intelligent experiences. Users can not only play the game but also learn from the AI by requesting move suggestions and visualizing its decision-making process.
 
 ## Features
@@ -15,7 +17,7 @@ Welcome to the OthelloAI Dojo! This is a modern, interactive web application bui
 
 ## Technology Stack
 
-This project was built with the help of an AI coding assistant and utilizes a modern, type-safe technology stack.
+This project was built with the help of caffeine, black sabath and grok.It utilizes a modern, type-safe technology stack.
 
 - **Framework**: [Next.js](https://nextjs.org/) (using the App Router)
 - **Language**: [TypeScript](https://www.typescriptlang.org/),ParselTzoungue 
