@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Bot, BrainCircuit, Lightbulb, BarChart, Info } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
-import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString } from '@/lib/othello';
+import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, isValidMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
 import GameInfoPanel from '@/components/game-info-panel';
 import AiPanel from '@/components/ai-panel';
@@ -87,7 +87,7 @@ export default function Home() {
     setVisualization(null);
   };
   
-  const handleSuggestMove = async () => {
+  const handleSuggestMove = async (retries = 2) => {
     setSuggestionLoading(true);
     setSuggestion(null);
     try {
@@ -95,12 +95,26 @@ export default function Home() {
         boardState: boardToString(board),
         player: currentPlayer,
       });
-      setSuggestion(response);
-      const moveString = `${rowLabels[response.move.row]}${response.move.col + 1}`;
-      toast({
-        title: "AI Suggestion",
-        description: `The AI suggests moving to ${moveString}.`,
-      });
+
+      const { move } = response;
+      if (isValidMove(board, currentPlayer, move.row, move.col)) {
+        setSuggestion(response);
+        const moveString = `${rowLabels[response.move.row]}${response.move.col + 1}`;
+        toast({
+          title: "AI Suggestion",
+          description: `The AI suggests moving to ${moveString}.`,
+        });
+      } else if (retries > 0) {
+        console.warn("AI suggested an invalid move. Retrying...");
+        await handleSuggestMove(retries - 1);
+      } else {
+         toast({
+          title: "Error",
+          description: "The AI failed to suggest a valid move.",
+          variant: "destructive",
+        });
+      }
+
     } catch (error) {
       console.error("Error getting move suggestion:", error);
       toast({
@@ -228,7 +242,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <AiPanel
-                onSuggestMove={handleSuggestMove}
+                onSuggestMove={() => handleSuggestMove()}
                 suggestion={displayedSuggestion}
                 suggestionLoading={suggestionLoading}
                 onVisualize={handleVisualize}
