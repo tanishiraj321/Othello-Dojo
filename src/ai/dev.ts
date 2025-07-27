@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/suggest-good-moves.ts';
+import '@/ai/flows/real-time-decision-visualization.ts';
