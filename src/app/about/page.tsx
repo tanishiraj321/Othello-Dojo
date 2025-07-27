@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BrainCircuit, Code, Users } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, Code, Users, ExternalLink, BookOpen } from 'lucide-react';
 
 export default function AboutPage() {
   return (
@@ -67,6 +67,32 @@ export default function AboutPage() {
               <li><strong>Generative AI:</strong> Google's Gemini models accessed via Genkit.</li>
               <li><strong>Language:</strong> TypeScript</li>
             </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <BookOpen className="w-6 h-6 text-primary" />
+              Resources & Further Reading
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-muted-foreground">
+              <a href="https://en.wikipedia.org/wiki/Reversi" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Othello (Reversi) on Wikipedia
+              </a>
+              <a href="https://en.wikipedia.org/wiki/Minimax" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Minimax Algorithm on Wikipedia
+              </a>
+              <a href="https://nextjs.org" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Next.js Official Website
+              </a>
+              <a href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Tailwind CSS Official Website
+              </a>
+               <a href="https://ai.google/gemini" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Google Gemini
+              </a>
           </CardContent>
         </Card>
 
