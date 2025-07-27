@@ -18,7 +18,10 @@ const SuggestGoodMovesInputSchema = z.object({
 export type SuggestGoodMovesInput = z.infer<typeof SuggestGoodMovesInputSchema>;
 
 const SuggestGoodMovesOutputSchema = z.object({
-  move: z.string().describe('The suggested move for the current player.'),
+  move: z.object({
+      row: z.number().describe('The row index of the suggested move (0-7).'),
+      col: z.number().describe('The column index of the suggested move (0-7).'),
+  }).describe('The suggested move coordinates.'),
   rationale: z
     .string()
     .describe('The rationale behind the suggested move.'),
@@ -33,9 +36,9 @@ const prompt = ai.definePrompt({
   name: 'suggestGoodMovesPrompt',
   input: {schema: SuggestGoodMovesInputSchema},
   output: {schema: SuggestGoodMovesOutputSchema},
-  prompt: `You are an expert Othello player and strategist. Given the current state of the board and the current player, suggest a good move and explain your reasoning. 
+  prompt: `You are an expert Othello player and strategist. Given the current state of the board and the current player, suggest a good move and explain your reasoning. The top-left corner is row 0, col 0.
 
-Board State:
+Board State (B=Black, W=White, _=Empty):
 {{boardState}}
 
 Current Player: {{player}}
@@ -45,7 +48,7 @@ Consider the following when making your suggestion:
 * Position yourself for future strategic advantages.
 * Avoid moves that immediately benefit your opponent.
 
-Move:`,
+Return the suggested move as a row and column index.`,
 });
 
 const suggestGoodMovesFlow = ai.defineFlow(

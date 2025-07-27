@@ -16,6 +16,7 @@ interface OthelloBoardProps {
   onCellClick: (move: Move) => void;
   validMoves: Move[];
   player: Player;
+  suggestedMove: Move | null;
 }
 
 const GridLabel = ({ label }: { label: string }) => (
@@ -24,7 +25,7 @@ const GridLabel = ({ label }: { label: string }) => (
     </div>
 )
 
-export default function OthelloBoard({ board, onCellClick, validMoves }: OthelloBoardProps) {
+export default function OthelloBoard({ board, onCellClick, validMoves, suggestedMove }: OthelloBoardProps) {
   const colLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   return (
     <div className="w-full max-w-2xl mx-auto aspect-square">
@@ -43,15 +44,19 @@ export default function OthelloBoard({ board, onCellClick, validMoves }: Othello
                 {board.map((row, rowIndex) =>
                     row.map((cell, colIndex) => {
                     const isMoveValid = validMoves.some(m => m.row === rowIndex && m.col === colIndex);
+                    const isSuggestedMove = suggestedMove && suggestedMove.row === rowIndex && suggestedMove.col === colIndex;
                     return (
                         <div
                         key={`${rowIndex}-${colIndex}`}
                         className={cn(
-                            "aspect-square bg-green-800 flex items-center justify-center p-1 rounded-sm",
+                            "aspect-square bg-green-800 flex items-center justify-center p-1 rounded-sm relative",
                             isMoveValid ? "cursor-pointer hover:bg-green-700 transition-colors" : ""
                         )}
                         onClick={() => onCellClick({ row: rowIndex, col: colIndex })}
                         >
+                        {isSuggestedMove && (
+                          <div className="absolute inset-0 bg-red-500/50 rounded-full animate-pulse" />
+                        )}
                         {cell === 'black' && <BlackPiece />}
                         {cell === 'white' && <WhitePiece />}
                         {cell === 'empty' && isMoveValid && (

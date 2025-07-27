@@ -5,7 +5,7 @@ import { Loader2, Lightbulb, Eye, Repeat } from 'lucide-react';
 
 interface AIPanelProps {
   onSuggestMove: () => void;
-  suggestion: { move: string; rationale: string } | null;
+  suggestion: React.ReactNode | null;
   suggestionLoading: boolean;
   onVisualize: () => void;
   visualization: { explanation: string } | null;
@@ -38,12 +38,7 @@ export default function AiPanel({
         )}
         Suggest a Move
       </Button>
-      {suggestion && (
-        <div className="text-sm p-3 bg-muted rounded-md space-y-1">
-            <p><strong className="text-primary">Suggested Move:</strong> {suggestion.move}</p>
-            <p className="font-code text-muted-foreground">{suggestion.rationale}</p>
-        </div>
-      )}
+      {suggestion}
 
       <Button
         onClick={onVisualize}

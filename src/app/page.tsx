@@ -9,11 +9,13 @@ import OthelloBoard from '@/components/othello-board';
 import GameInfoPanel from '@/components/game-info-panel';
 import AiPanel from '@/components/ai-panel';
 import WinRateChart from '@/components/win-rate-chart';
-import { suggestGoodMoves } from '@/ai/flows/suggest-good-moves';
+import { suggestGoodMoves, SuggestGoodMovesOutput } from '@/ai/flows/suggest-good-moves';
 import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { minimax } from '@/lib/minimax';
+
+const colLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 export default function Home() {
   const [board, setBoard] = useState<BoardState>(createInitialBoard());
@@ -25,7 +27,7 @@ export default function Home() {
   const [aiIsThinking, setAiIsThinking] = useState(false);
   const [difficulty, setDifficulty] = useState(1); // 1: Easy, 3: Medium, 5: Hard
   
-  const [suggestion, setSuggestion] = useState<{ move: string; rationale: string } | null>(null);
+  const [suggestion, setSuggestion] = useState<SuggestGoodMovesOutput | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   
   const [visualization, setVisualization] = useState<{ explanation: string } | null>(null);
@@ -73,6 +75,7 @@ export default function Home() {
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
     setBoard(newBoard);
     setCurrentPlayer(getOpponent(currentPlayer));
+    setSuggestion(null); // Clear suggestion after move
   };
 
   const startNewGame = (player: Player) => {
@@ -93,9 +96,10 @@ export default function Home() {
         player: currentPlayer,
       });
       setSuggestion(response);
+      const moveString = `${colLabels[response.move.col]}${response.move.row + 1}`;
       toast({
         title: "AI Suggestion",
-        description: `The AI suggests moving to ${response.move}.`,
+        description: `The AI suggests moving to ${moveString}.`,
       });
     } catch (error) {
       console.error("Error getting move suggestion:", error);
@@ -178,6 +182,13 @@ export default function Home() {
     }
   }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty]);
 
+  const displayedSuggestion = suggestion && (
+    <div className="text-sm p-3 bg-muted rounded-md space-y-1">
+      <p><strong className="text-primary">Suggested Move:</strong> {`${colLabels[suggestion.move.col]}${suggestion.move.row + 1}`}</p>
+      <p className="font-code text-muted-foreground">{suggestion.rationale}</p>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8 font-body">
       <header className="mb-8 text-center">
@@ -218,7 +229,7 @@ export default function Home() {
             <CardContent>
               <AiPanel
                 onSuggestMove={handleSuggestMove}
-                suggestion={suggestion}
+                suggestion={displayedSuggestion}
                 suggestionLoading={suggestionLoading}
                 onVisualize={handleVisualize}
                 visualization={visualization}
@@ -236,6 +247,7 @@ export default function Home() {
             onCellClick={handleCellClick}
             validMoves={currentPlayer === userPlayer ? validMoves : []}
             player={userPlayer}
+            suggestedMove={suggestion?.move ?? null}
           />
         </div>
         
