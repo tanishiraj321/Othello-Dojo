@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Bot, BrainCircuit, Lightbulb, BarChart } from 'lucide-react';
+import Link from 'next/link';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -12,6 +13,7 @@ import { suggestGoodMoves } from '@/ai/flows/suggest-good-moves';
 import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { minimax } from '@/lib/minimax';
 
 export default function Home() {
   const [board, setBoard] = useState<BoardState>(createInitialBoard());
@@ -21,6 +23,7 @@ export default function Home() {
   const [score, setScore] = useState({ black: 2, white: 2 });
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
   const [aiIsThinking, setAiIsThinking] = useState(false);
+  const [difficulty, setDifficulty] = useState(1); // 1: Easy, 3: Medium, 5: Hard
   
   const [suggestion, setSuggestion] = useState<{ move: string; rationale: string } | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
@@ -162,21 +165,18 @@ export default function Home() {
       setTimeout(() => {
         const moves = getValidMoves(board, aiPlayer);
         if (moves.length > 0) {
-          // Simple AI: pick move that flips the most pieces
-          const bestMove = moves.reduce((best, move) => {
-            const tempBoard = applyMove(board, aiPlayer, move.row, move.col);
-            const currentBestBoard = applyMove(board, aiPlayer, best.row, best.col);
-            return getScore(tempBoard)[aiPlayer] > getScore(currentBestBoard)[aiPlayer] ? move : best;
-          }, moves[0]);
+          const { move: bestMove } = minimax(board, difficulty, true, aiPlayer);
 
-          const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
-          setBoard(newBoard);
-          setCurrentPlayer(userPlayer);
+          if(bestMove){
+            const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
+            setBoard(newBoard);
+            setCurrentPlayer(userPlayer);
+          }
         }
         setAiIsThinking(false);
-      }, 1000);
+      }, 500);
     }
-  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer]);
+  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty]);
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8 font-body">
@@ -188,6 +188,12 @@ export default function Home() {
           </h1>
         </div>
         <p className="text-muted-foreground mt-2">Observe, Learn, and Play against a learning Othello AI.</p>
+        <div className="mt-4">
+          <Link href="/about" className="text-sm text-primary hover:underline flex items-center justify-center gap-1">
+            <Info className="w-4 h-4" />
+            About this App
+          </Link>
+        </div>
       </header>
       
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto">
@@ -199,6 +205,8 @@ export default function Home() {
             onStartGame={startNewGame}
             userPlayer={userPlayer}
             aiIsThinking={aiIsThinking}
+            difficulty={difficulty}
+            onDifficultyChange={setDifficulty}
           />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

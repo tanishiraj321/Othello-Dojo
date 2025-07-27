@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { User, Cpu } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface GameInfoPanelProps {
   gameState: 'menu' | 'playing' | 'gameOver';
@@ -13,6 +15,8 @@ interface GameInfoPanelProps {
   onStartGame: (player: Player) => void;
   userPlayer: Player;
   aiIsThinking: boolean;
+  difficulty: number;
+  onDifficultyChange: (level: number) => void;
 }
 
 export default function GameInfoPanel({
@@ -21,7 +25,9 @@ export default function GameInfoPanel({
   score,
   onStartGame,
   userPlayer,
-  aiIsThinking
+  aiIsThinking,
+  difficulty,
+  onDifficultyChange,
 }: GameInfoPanelProps) {
     const renderGameState = () => {
         if (gameState === 'gameOver') {
@@ -75,11 +81,29 @@ export default function GameInfoPanel({
         {renderGameState()}
 
         { (gameState === 'menu' || gameState === 'gameOver') && (
-            <div className="space-y-2 pt-4">
-                 <p className="text-center text-muted-foreground">Start a new game as:</p>
-                 <div className="flex gap-2">
-                    <Button className="w-full" onClick={() => onStartGame('black')}>Black</Button>
-                    <Button className="w-full" variant="secondary" onClick={() => onStartGame('white')}>White</Button>
+            <div className="space-y-4 pt-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="difficulty">AI Difficulty</Label>
+                    <Select
+                        value={String(difficulty)}
+                        onValueChange={(value) => onDifficultyChange(Number(value))}
+                    >
+                        <SelectTrigger id="difficulty" className="w-full">
+                            <SelectValue placeholder="Select difficulty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="1">Easy</SelectItem>
+                            <SelectItem value="3">Medium</SelectItem>
+                            <SelectItem value="5">Hard</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="space-y-2">
+                    <p className="text-center text-muted-foreground">Start a new game as:</p>
+                    <div className="flex gap-2">
+                        <Button className="w-full" onClick={() => onStartGame('black')}>Black</Button>
+                        <Button className="w-full" variant="secondary" onClick={() => onStartGame('white')}>White</Button>
+                    </div>
                  </div>
             </div>
         )}
