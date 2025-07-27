@@ -18,30 +18,52 @@ interface OthelloBoardProps {
   player: Player;
 }
 
+const GridLabel = ({ label }: { label: string }) => (
+    <div className="flex items-center justify-center text-sm font-bold text-muted-foreground">
+        {label}
+    </div>
+)
+
 export default function OthelloBoard({ board, onCellClick, validMoves }: OthelloBoardProps) {
+  const colLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   return (
-    <div className="aspect-square w-full max-w-2xl mx-auto bg-green-900 p-2 grid grid-cols-8 gap-1 rounded-lg shadow-2xl">
-      {board.map((row, rowIndex) =>
-        row.map((cell, colIndex) => {
-          const isMoveValid = validMoves.some(m => m.row === rowIndex && m.col === colIndex);
-          return (
-            <div
-              key={`${rowIndex}-${colIndex}`}
-              className={cn(
-                "aspect-square bg-green-800 flex items-center justify-center p-1 rounded-sm",
-                isMoveValid ? "cursor-pointer hover:bg-green-700 transition-colors" : ""
-              )}
-              onClick={() => onCellClick({ row: rowIndex, col: colIndex })}
-            >
-              {cell === 'black' && <BlackPiece />}
-              {cell === 'white' && <WhitePiece />}
-              {cell === 'empty' && isMoveValid && (
-                <div className="w-1/3 h-1/3 bg-primary/50 rounded-full" />
-              )}
+    <div className="w-full max-w-2xl mx-auto aspect-square">
+        <div className="grid grid-cols-[auto_1fr] gap-2 h-full">
+            {/* Row Labels */}
+            <div className="grid grid-rows-8 gap-1">
+                {Array.from({length: 8}, (_, i) => <GridLabel key={`row-${i}`} label={`${i + 1}`} />)}
             </div>
-          );
-        })
-      )}
+            <div className="grid grid-rows-[auto_1fr] gap-2 h-full">
+                {/* Column Labels */}
+                <div className="grid grid-cols-8 gap-1">
+                    {colLabels.map(label => <GridLabel key={`col-${label}`} label={label} />)}
+                </div>
+                {/* Board */}
+                <div className="w-full h-full bg-green-900 p-2 grid grid-cols-8 gap-1 rounded-lg shadow-2xl">
+                {board.map((row, rowIndex) =>
+                    row.map((cell, colIndex) => {
+                    const isMoveValid = validMoves.some(m => m.row === rowIndex && m.col === colIndex);
+                    return (
+                        <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className={cn(
+                            "aspect-square bg-green-800 flex items-center justify-center p-1 rounded-sm",
+                            isMoveValid ? "cursor-pointer hover:bg-green-700 transition-colors" : ""
+                        )}
+                        onClick={() => onCellClick({ row: rowIndex, col: colIndex })}
+                        >
+                        {cell === 'black' && <BlackPiece />}
+                        {cell === 'white' && <WhitePiece />}
+                        {cell === 'empty' && isMoveValid && (
+                            <div className="w-1/3 h-1/3 bg-primary/50 rounded-full" />
+                        )}
+                        </div>
+                    );
+                    })
+                )}
+                </div>
+            </div>
+        </div>
     </div>
   );
 }
