@@ -60,9 +60,39 @@ The UI is built with React components, many of which are styled using ShadCN UI.
 
 To run this project locally, you'll need to have Node.js and npm installed.
 
-1.  **Clone the repository.**
-2.  **Install dependencies**: `npm install`
-3.  **Set up environment variables**: Create a `.env` file and add your `GEMINI_API_KEY`.
-4.  **Run the development server**: `npm run dev`
+1.  **Clone the Repository**:
+    ```bash
+    git clone [repository-url]
+    cd othello-ai-dojo
+    ```
 
-The application will be available at `http://localhost:9002`.
+2.  **Install Dependencies**:
+    Use npm to install all the required packages.
+    ```bash
+    npm install
+    ```
+
+3.  **Set Up Environment Variables**:
+    Create a new file named `.env` in the root of the project. This file is needed for the generative AI features. If you don't intend to use the AI move suggestion or visualization, you can leave this blank.
+    ```
+    GEMINI_API_KEY=YOUR_API_KEY_HERE
+    ```
+    You can get a Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey).
+
+4.  **Run the Development Server**:
+    ```bash
+    npm run dev
+    ```
+    The application will be available at `http://localhost:9002`.
+
+## Contributing & Bug Reports
+
+We welcome contributions and feedback! If you'd like to contribute, report a bug, or request a new feature, please do so via the project's official repository.
+
+- **Bug Reports**: If you find a bug, please open an issue and provide as much detail as possible, including steps to reproduce the issue, your browser/OS, and screenshots if applicable.
+- **Feature Requests**: Have a great idea for a new feature? Open an issue to describe your proposal. We'd love to hear it.
+- **Pull Requests**: Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## Contact
+
+For any questions or inquiries, please reach out to the development team through the project's repository or via email at `developer@example.com`.
