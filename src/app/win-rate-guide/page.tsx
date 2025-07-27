@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -73,13 +74,13 @@ export default function WinRateGuidePage() {
                 <p>
                     <strong>Y-Axis (Vertical):</strong> This shows the number of wins.
                 </p>
-                <p>
-                    <strong>Bars:</strong> Each bar is split into two colors:
+                <div>
+                    <p><strong>Bars:</strong> Each bar is split into two colors:</p>
                     <ul className="list-disc pl-5 mt-2 space-y-1">
                         <li><span className="font-semibold text-primary">Blue (AI Wins):</span> The bottom portion of the bar shows the number of games won by our AI.</li>
                         <li><span className="font-semibold text-muted-foreground/80">Gray (Opponent Wins):</span> The top portion shows the number of games won by the opponent.</li>
                     </ul>
-                </p>
+                </div>
             </CardContent>
             </Card>
             <Card>
