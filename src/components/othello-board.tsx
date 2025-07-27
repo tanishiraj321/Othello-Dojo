@@ -26,18 +26,18 @@ const GridLabel = ({ label }: { label: string }) => (
 )
 
 export default function OthelloBoard({ board, onCellClick, validMoves, suggestedMove }: OthelloBoardProps) {
-  const colLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   return (
     <div className="w-full max-w-2xl mx-auto aspect-square">
         <div className="grid grid-cols-[auto_1fr] gap-2 h-full">
             {/* Row Labels */}
             <div className="grid grid-rows-8 gap-1">
-                {Array.from({length: 8}, (_, i) => <GridLabel key={`row-${i}`} label={`${i + 1}`} />)}
+                {rowLabels.map((label) => <GridLabel key={`row-${label}`} label={label} />)}
             </div>
             <div className="grid grid-rows-[auto_1fr] gap-2 h-full">
                 {/* Column Labels */}
                 <div className="grid grid-cols-8 gap-1">
-                    {colLabels.map(label => <GridLabel key={`col-${label}`} label={label} />)}
+                    {Array.from({length: 8}, (_, i) => <GridLabel key={`col-${i}`} label={`${i + 1}`} />)}
                 </div>
                 {/* Board */}
                 <div className="w-full h-full bg-green-900 p-2 grid grid-cols-8 gap-1 rounded-lg shadow-2xl">

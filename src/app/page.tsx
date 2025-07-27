@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { minimax } from '@/lib/minimax';
 
-const colLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 export default function Home() {
   const [board, setBoard] = useState<BoardState>(createInitialBoard());
@@ -96,7 +96,7 @@ export default function Home() {
         player: currentPlayer,
       });
       setSuggestion(response);
-      const moveString = `${colLabels[response.move.col]}${response.move.row + 1}`;
+      const moveString = `${rowLabels[response.move.row]}${response.move.col + 1}`;
       toast({
         title: "AI Suggestion",
         description: `The AI suggests moving to ${moveString}.`,
@@ -184,7 +184,7 @@ export default function Home() {
 
   const displayedSuggestion = suggestion && (
     <div className="text-sm p-3 bg-muted rounded-md space-y-1">
-      <p><strong className="text-primary">Suggested Move:</strong> {`${colLabels[suggestion.move.col]}${suggestion.move.row + 1}`}</p>
+      <p><strong className="text-primary">Suggested Move:</strong> {`${rowLabels[suggestion.move.row]}${suggestion.move.col + 1}`}</p>
       <p className="font-code text-muted-foreground">{suggestion.rationale}</p>
     </div>
   );
