@@ -6,15 +6,29 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 
 interface PieceProps {
+  color: 'black' | 'white';
   isFlipping: boolean;
 }
 
-const Piece = React.memo(({ color, isFlipping }: { color: 'black' | 'white', isFlipping: boolean }) => (
-    <div className={cn("relative w-full h-full duration-500")} style={{ transformStyle: 'preserve-3d', transform: isFlipping ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
-        <div className="absolute w-full h-full rounded-full bg-black shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg)' }} />
-        <div className="absolute w-full h-full rounded-full bg-white shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} />
-    </div>
-));
+const Piece = React.memo(({ color, isFlipping }: PieceProps) => {
+    // If the piece is white, we want it to start rotated 180deg so the white face shows.
+    // The flip animation will then rotate it to 360deg (which looks like 0), revealing the black face.
+    const initialRotation = color === 'white' ? 180 : 0;
+    const targetRotation = initialRotation + 180;
+    
+    return (
+        <div 
+            className={cn("relative w-full h-full duration-500")} 
+            style={{ 
+                transformStyle: 'preserve-3d', 
+                transform: `rotateY(${isFlipping ? targetRotation : initialRotation}deg)` 
+            }}
+        >
+            <div className="absolute w-full h-full rounded-full bg-black shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg)' }} />
+            <div className="absolute w-full h-full rounded-full bg-white shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} />
+        </div>
+    );
+});
 Piece.displayName = 'Piece';
 
 
