@@ -14,8 +14,6 @@ import WinRateChart from '@/components/win-rate-chart';
 import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization';
 import { analyzeGame } from '@/ai/flows/game-analysis';
 import type { AnalyzeGameOutput } from '@/ai/flows/game-analysis';
-import { rateMove } from '@/ai/flows/rate-move';
-import type { RateMoveOutput } from '@/ai/flows/rate-move';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { minimax } from '@/lib/minimax';
@@ -25,6 +23,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2 } from 'lucide-react';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+interface RateMoveOutput {
+  rating: number;
+  analysis: string;
+}
+
 
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
   const [state, setState] = useState<T>(() => {
@@ -98,6 +102,60 @@ export default function Home() {
     // audio.play().catch(e => console.error("Error playing sound:", e));
   };
 
+  const getMoveRating = (
+    boardBefore: BoardState,
+    player: Player,
+    move: Move,
+    aiDifficulty: number
+  ): RateMoveOutput => {
+    const validMoves = getValidMoves(boardBefore, player);
+    if (validMoves.length === 0) {
+      return { rating: 0, analysis: "No moves were available." };
+    }
+
+    // Use minimax to find the best possible move and its score
+    const { score: bestScore } = minimax(boardBefore, aiDifficulty, true, player);
+
+    // Evaluate all possible moves to find the range of outcomes
+    const moveScores = validMoves.map(currentMove => {
+      const tempBoard = applyMove(boardBefore, player, currentMove.row, currentMove.col);
+      const { score } = minimax(tempBoard, aiDifficulty > 1 ? aiDifficulty - 1 : 1, false, getOpponent(player));
+      return { ...currentMove, score };
+    });
+
+    const worstScore = Math.min(...moveScores.map(m => m.score));
+    
+    // Evaluate the score of the board *after* the player's move, from the perspective of the opponent.
+    const evaluationOfPlayerMove = moveScores.find(m => m.row === move.row && m.col === move.col)?.score ?? worstScore;
+    
+    // Normalize the player's move score to a 0-1 range
+    let normalizedScore = 0;
+    if (bestScore > worstScore) {
+      // Normalize score based on where it falls between the worst and best possible scores
+      normalizedScore = (evaluationOfPlayerMove - worstScore) / (bestScore - worstScore);
+    } else if (bestScore === worstScore) {
+       normalizedScore = 1; // Only one move was possible, so it must be the best.
+    }
+    
+    // Convert to a 5-star rating, ensuring it's at least 1
+    const rating = Math.max(1, Math.round(normalizedScore * 4) + 1);
+
+    let analysis = "";
+    if (rating >= 5) {
+        analysis = "Excellent! You found the optimal move.";
+    } else if (rating >= 4) {
+        analysis = "Great move! Very strong play.";
+    } else if (rating >= 3) {
+        analysis = "Good move, but there was a better option.";
+    } else if (rating >= 2) {
+        analysis = "A decent move, but it has drawbacks.";
+    } else {
+        analysis = "This move might be a mistake.";
+    }
+
+    return { rating, analysis };
+  };
+
 
   const updateGameData = useCallback((currentBoard: BoardState, player: Player) => {
     const newValidMoves = getValidMoves(currentBoard, player);
@@ -149,13 +207,9 @@ export default function Home() {
 
     // After player's move, get the AI review
     setReviewLoading(true);
+    setMoveReview(null);
     try {
-        const review = await rateMove({
-            boardBefore: boardBeforeMove,
-            player: playerMakingMove,
-            difficulty: difficulty,
-            move: move,
-        } as any);
+        const review = getMoveRating(boardBeforeMove, playerMakingMove, move, difficulty);
         setMoveReview(review);
     } catch (error) {
         console.error("Error getting move review:", error);
@@ -528,7 +582,7 @@ export default function Home() {
                     {reviewLoading && (
                         <div className="flex items-center justify-center h-24">
                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                           <p className="ml-3 text-muted-foreground">AI is reviewing your move...</p>
+                           <p className="ml-3 text-muted-foreground">Dojo Master is reviewing...</p>
                         </div>
                     )}
                     {!reviewLoading && moveReview && (
@@ -546,7 +600,7 @@ export default function Home() {
                     )}
                      {!reviewLoading && !moveReview && gameState === 'playing' && (
                         <p className="text-muted-foreground text-center text-sm h-24 flex items-center justify-center">
-                            Make a move to see the AI's review of your play.
+                            Make a move to see the Dojo Master's review.
                         </p>
                     )}
                      {!reviewLoading && !moveReview && gameState !== 'playing' && (
