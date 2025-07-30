@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -21,12 +21,15 @@ const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 export default function Home() {
   const [board, setBoard] = useState<BoardState>(createInitialBoard());
   const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
-  const [userPlayer, setUserPlayer] = useState<Player>('black');
+  const [userPlayer, setUserPlayer] = useState<Player | null>('black');
   const [validMoves, setValidMoves] = useState<Move[]>([]);
   const [score, setScore] = useState({ black: 2, white: 2 });
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
+  const [gameMode, setGameMode] = useState<'playerVsAi' | 'aiVsAi'>('playerVsAi');
   const [aiIsThinking, setAiIsThinking] = useState(false);
-  const [difficulty, setDifficulty] = useState(1); // 1: Easy, 3: Medium, 5: Hard
+  const [difficulty, setDifficulty] = useState(1); // Player vs AI difficulty
+  const [ai1Difficulty, setAi1Difficulty] = useState(1);
+  const [ai2Difficulty, setAi2Difficulty] = useState(1);
   const [lastMove, setLastMove] = useState<Move | null>(null);
   
   const [suggestion, setSuggestion] = useState<{ move: Move; rationale: string; } | null>(null);
@@ -57,11 +60,14 @@ export default function Home() {
       if (opponentMoves.length === 0) {
         setGameState('gameOver');
       } else {
-        // Pass turn
+        toast({
+          title: "Turn Skipped",
+          description: `No valid moves for ${player}. ${opponent}'s turn.`,
+        });
         setCurrentPlayer(opponent);
       }
     }
-  }, []);
+  }, [toast]);
 
 
   useEffect(() => {
@@ -71,7 +77,7 @@ export default function Home() {
   }, [board, currentPlayer, gameState, updateGameData]);
   
   const handleCellClick = (move: Move) => {
-    if (gameState !== 'playing' || currentPlayer !== userPlayer || aiIsThinking) return;
+    if (gameState !== 'playing' || currentPlayer !== userPlayer || aiIsThinking || gameMode === 'aiVsAi') return;
     
     const isMoveValid = validMoves.some(m => m.row === move.row && m.col === move.col);
     if (!isMoveValid) return;
@@ -81,15 +87,29 @@ export default function Home() {
     setBoard(newBoard);
     setLastMove(move);
     setCurrentPlayer(getOpponent(currentPlayer));
-    setSuggestion(null); // Clear suggestion after move
+    setSuggestion(null);
   };
 
-  const startNewGame = (player: Player) => {
+  const startPlayerVsAiGame = (player: Player) => {
     const initialBoard = createInitialBoard();
     setBoard(initialBoard);
     setUserPlayer(player);
     setCurrentPlayer('black');
     setGameState('playing');
+    setGameMode('playerVsAi');
+    setSuggestion(null);
+    setVisualization(null);
+    setLastMove(null);
+    setHistory([{board: initialBoard, player: 'black', move: null}]);
+  };
+
+  const startAiVsAiGame = () => {
+    const initialBoard = createInitialBoard();
+    setBoard(initialBoard);
+    setUserPlayer(null);
+    setCurrentPlayer('black');
+    setGameState('playing');
+    setGameMode('aiVsAi');
     setSuggestion(null);
     setVisualization(null);
     setLastMove(null);
@@ -97,11 +117,11 @@ export default function Home() {
   };
   
   const handleSuggestMove = () => {
+    if (gameMode === 'aiVsAi' || !userPlayer) return;
     setSuggestionLoading(true);
     setSuggestion(null);
 
     try {
-      // Use the same minimax logic as the AI opponent to find the best move.
       const { move } = minimax(board, difficulty, true, currentPlayer);
 
       if (move) {
@@ -135,13 +155,14 @@ export default function Home() {
     setVisualizationLoading(true);
     setVisualization(null);
     try {
-      const possibleMoves = getValidMoves(board, 'white').map(move => {
-        const tempBoard = applyMove(board, 'white', move.row, move.col);
+      const opponent = gameMode === 'playerVsAi' && userPlayer ? getOpponent(userPlayer) : 'white';
+      const possibleMoves = getValidMoves(board, opponent).map(move => {
+        const tempBoard = applyMove(board, opponent, move.row, move.col);
         const newScore = getScore(tempBoard);
         return {
           row: move.row,
           col: move.col,
-          score: newScore.white - score.white
+          score: newScore[opponent] - score[opponent]
         }
       });
       
@@ -167,7 +188,11 @@ export default function Home() {
   };
   
   const runNewTrainingSession = () => {
-    startNewGame(userPlayer);
+    if (gameMode === 'playerVsAi' && userPlayer) {
+      startPlayerVsAiGame(userPlayer);
+    } else if (gameMode === 'aiVsAi') {
+      startAiVsAiGame();
+    }
     setTrainingData(prev => prev.map(d => ({
         ...d,
         aiWins: Math.floor(Math.random() * d.games),
@@ -180,14 +205,13 @@ export default function Home() {
   };
 
   const handleUndo = () => {
-    if (history.length < 2) {
-      toast({ title: "Cannot Undo", description: "No moves to undo.", variant: "destructive" });
+    if (history.length < 2 || gameMode === 'aiVsAi') {
+      toast({ title: "Cannot Undo", description: "No moves to undo or action not allowed in AI vs AI mode.", variant: "destructive" });
       return;
     }
   
-    // We want to go back to the state before the user's last move.
-    // The AI moves right after, so we pop twice.
-    const newHistory = history.slice(0, -2);
+    const movesToUndo = (userPlayer === 'black' && currentPlayer === 'black') || (userPlayer === 'white' && currentPlayer === 'white') ? 2 : 1;
+    const newHistory = history.slice(0, -(movesToUndo));
     const lastPlayerState = newHistory[newHistory.length - 1];
 
     if (lastPlayerState) {
@@ -200,28 +224,65 @@ export default function Home() {
     }
   };
 
-  const aiPlayer = useMemo(() => getOpponent(userPlayer), [userPlayer]);
+  const aiPlayer = useMemo(() => {
+    if (gameMode === 'playerVsAi' && userPlayer) {
+      return getOpponent(userPlayer)
+    }
+    return null;
+  }, [userPlayer, gameMode]);
+
 
   useEffect(() => {
-    if (gameState === 'playing' && currentPlayer === aiPlayer && !aiIsThinking) {
+    if (gameState !== 'playing' || aiIsThinking) return;
+  
+    const handlePlayerVsAiMove = () => {
+      if (currentPlayer === aiPlayer) {
+        setAiIsThinking(true);
+        setTimeout(() => {
+          const moves = getValidMoves(board, aiPlayer);
+          if (moves.length > 0) {
+            const { move: bestMove } = minimax(board, difficulty, true, aiPlayer);
+  
+            if(bestMove){
+              setHistory(prev => [...prev, {board, player: currentPlayer, move: bestMove}]);
+              const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
+              setBoard(newBoard);
+              setLastMove(bestMove);
+              setCurrentPlayer(userPlayer as Player);
+            }
+          }
+          setAiIsThinking(false);
+        }, 500);
+      }
+    };
+  
+    const handleAiVsAiMove = () => {
       setAiIsThinking(true);
       setTimeout(() => {
-        const moves = getValidMoves(board, aiPlayer);
+        const moves = getValidMoves(board, currentPlayer);
         if (moves.length > 0) {
-          const { move: bestMove } = minimax(board, difficulty, true, aiPlayer);
-
+          const currentAiDifficulty = currentPlayer === 'black' ? ai1Difficulty : ai2Difficulty;
+          const { move: bestMove } = minimax(board, currentAiDifficulty, true, currentPlayer);
+  
           if(bestMove){
             setHistory(prev => [...prev, {board, player: currentPlayer, move: bestMove}]);
-            const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
+            const newBoard = applyMove(board, currentPlayer, bestMove.row, bestMove.col);
             setBoard(newBoard);
             setLastMove(bestMove);
-            setCurrentPlayer(userPlayer);
+            setCurrentPlayer(getOpponent(currentPlayer));
           }
         }
         setAiIsThinking(false);
-      }, 500);
+      }, 3000); // 3-second delay for visualization
+    };
+  
+    if (gameMode === 'playerVsAi') {
+      handlePlayerVsAiMove();
+    } else if (gameMode === 'aiVsAi') {
+      handleAiVsAiMove();
     }
-  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty]);
+  
+  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty, gameMode, ai1Difficulty, ai2Difficulty]);
 
   const displayedSuggestion = suggestion && (
     <div className="text-sm p-3 bg-muted rounded-md space-y-1">
@@ -230,7 +291,7 @@ export default function Home() {
     </div>
   );
 
-  const canUndo = gameState === 'playing' && history.length > 1 && !aiIsThinking && currentPlayer === userPlayer;
+  const canUndo = gameState === 'playing' && history.length > 1 && !aiIsThinking && gameMode === 'playerVsAi' && currentPlayer === userPlayer;
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8 font-body">
@@ -254,13 +315,20 @@ export default function Home() {
         <div className="lg:col-span-3 space-y-6">
           <GameInfoPanel
             gameState={gameState}
+            gameMode={gameMode}
+            onGameModeChange={setGameMode}
             currentPlayer={currentPlayer}
             score={score}
-            onStartGame={startNewGame}
+            onStartPlayerVsAi={startPlayerVsAiGame}
+            onStartAiVsAi={startAiVsAiGame}
             userPlayer={userPlayer}
             aiIsThinking={aiIsThinking}
             difficulty={difficulty}
             onDifficultyChange={setDifficulty}
+            ai1Difficulty={ai1Difficulty}
+            onAi1DifficultyChange={setAi1Difficulty}
+            ai2Difficulty={ai2Difficulty}
+            onAi2DifficultyChange={setAi2Difficulty}
           />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -278,7 +346,8 @@ export default function Home() {
                 visualization={visualization}
                 visualizationLoading={visualizationLoading}
                 onNewTraining={runNewTrainingSession}
-                isPlayerTurn={currentPlayer === userPlayer && gameState === 'playing'}
+                isPlayerTurn={gameMode === 'playerVsAi' && currentPlayer === userPlayer && gameState === 'playing'}
+                gameMode={gameMode}
               />
             </CardContent>
           </Card>
@@ -310,9 +379,14 @@ export default function Home() {
                 <ScrollArea className="h-48 w-full">
                     <div className="space-y-2 font-code text-sm">
                         {history.slice(1).map((entry, index) => (
-                            <div key={index} className="flex gap-4 p-1 rounded-md bg-muted/50">
-                                <span className="font-bold">{index + 1}.</span>
-                                <span className="capitalize">{entry.player}</span>
+                             <div key={index} className="flex gap-4 p-1 rounded-md bg-muted/50 items-center">
+                                <span className="font-bold w-6 text-right">{index + 1}.</span>
+                                <div className="flex items-center gap-1">
+                                    <div className={
+                                        `w-3 h-3 rounded-full ${entry.player === 'black' ? 'bg-black' : 'bg-white'}`
+                                    } />
+                                    <span className="capitalize w-14">{entry.player}</span>
+                                </div>
                                 <span>{entry.move ? `${rowLabels[entry.move.row]}${entry.move.col + 1}` : 'N/A'}</span>
                             </div>
                         ))}

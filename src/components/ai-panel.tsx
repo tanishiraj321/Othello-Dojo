@@ -12,6 +12,7 @@ interface AIPanelProps {
   visualizationLoading: boolean;
   onNewTraining: () => void;
   isPlayerTurn: boolean;
+  gameMode: 'playerVsAi' | 'aiVsAi';
 }
 
 export default function AiPanel({
@@ -23,12 +24,14 @@ export default function AiPanel({
   visualizationLoading,
   onNewTraining,
   isPlayerTurn,
+  gameMode,
 }: AIPanelProps) {
+  const isPlayerVsAi = gameMode === 'playerVsAi';
   return (
     <div className="space-y-4">
       <Button
         onClick={onSuggestMove}
-        disabled={suggestionLoading || !isPlayerTurn}
+        disabled={suggestionLoading || !isPlayerTurn || !isPlayerVsAi}
         className="w-full"
       >
         {suggestionLoading ? (
@@ -38,7 +41,7 @@ export default function AiPanel({
         )}
         Suggest a Move
       </Button>
-      {suggestion}
+      {isPlayerVsAi && suggestion}
 
       <Button
         onClick={onVisualize}
