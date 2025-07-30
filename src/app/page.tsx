@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Bot, BrainCircuit, Lightbulb, BarChart, Info } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, isValidMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -14,6 +14,8 @@ import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { minimax } from '@/lib/minimax';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -42,16 +44,17 @@ export default function Home() {
     { games: 50, aiWins: 35, opponentWins: 15 },
   ]);
 
+  const [history, setHistory] = useState<{board: BoardState, player: Player, move: Move | null}[]>([]);
   const { toast } = useToast();
 
-  const updateGameData = useCallback(() => {
-    const newValidMoves = getValidMoves(board, currentPlayer);
+  const updateGameData = useCallback((currentBoard: BoardState, player: Player) => {
+    const newValidMoves = getValidMoves(currentBoard, player);
     setValidMoves(newValidMoves);
-    setScore(getScore(board));
+    setScore(getScore(currentBoard));
 
     if (newValidMoves.length === 0) {
-      const opponent = getOpponent(currentPlayer);
-      const opponentMoves = getValidMoves(board, opponent);
+      const opponent = getOpponent(player);
+      const opponentMoves = getValidMoves(currentBoard, opponent);
       if (opponentMoves.length === 0) {
         setGameState('gameOver');
       } else {
@@ -59,11 +62,12 @@ export default function Home() {
         setCurrentPlayer(opponent);
       }
     }
-  }, [board, currentPlayer]);
+  }, []);
+
 
   useEffect(() => {
     if (gameState === 'playing') {
-      updateGameData();
+      updateGameData(board, currentPlayer);
     }
   }, [board, currentPlayer, gameState, updateGameData]);
   
@@ -74,6 +78,7 @@ export default function Home() {
     if (!isMoveValid) return;
 
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
+    setHistory(prev => [...prev, {board, player: currentPlayer, move}]);
     setBoard(newBoard);
     setLastMove(move);
     setCurrentPlayer(getOpponent(currentPlayer));
@@ -81,13 +86,15 @@ export default function Home() {
   };
 
   const startNewGame = (player: Player) => {
-    setBoard(createInitialBoard());
+    const initialBoard = createInitialBoard();
+    setBoard(initialBoard);
     setUserPlayer(player);
     setCurrentPlayer('black');
     setGameState('playing');
     setSuggestion(null);
     setVisualization(null);
     setLastMove(null);
+    setHistory([{board: initialBoard, player: 'black', move: null}]);
   };
   
   const handleSuggestMove = async (retries = 2) => {
@@ -176,7 +183,28 @@ export default function Home() {
       title: "New Training Session",
       description: "AI model has been reset and is learning from scratch.",
     });
-  }
+  };
+
+  const handleUndo = () => {
+    if (history.length < 2) {
+      toast({ title: "Cannot Undo", description: "No moves to undo.", variant: "destructive" });
+      return;
+    }
+  
+    // We want to go back to the state before the user's last move.
+    // The AI moves right after, so we pop twice.
+    const newHistory = history.slice(0, -2);
+    const lastPlayerState = newHistory[newHistory.length - 1];
+
+    if (lastPlayerState) {
+        setBoard(lastPlayerState.board);
+        setCurrentPlayer(lastPlayerState.player);
+        setLastMove(lastPlayerState.move);
+        setHistory(newHistory);
+        setSuggestion(null);
+        setVisualization(null);
+    }
+  };
 
   const aiPlayer = useMemo(() => getOpponent(userPlayer), [userPlayer]);
 
@@ -189,6 +217,7 @@ export default function Home() {
           const { move: bestMove } = minimax(board, difficulty, true, aiPlayer);
 
           if(bestMove){
+            setHistory(prev => [...prev, {board, player: currentPlayer, move: bestMove}]);
             const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
             setBoard(newBoard);
             setLastMove(bestMove);
@@ -206,6 +235,8 @@ export default function Home() {
       <p className="font-code text-muted-foreground">{suggestion.rationale}</p>
     </div>
   );
+
+  const canUndo = gameState === 'playing' && history.length > 1 && !aiIsThinking && currentPlayer === userPlayer;
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8 font-body">
@@ -270,7 +301,34 @@ export default function Home() {
           />
         </div>
         
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-6">
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
+                    <ListCollapse className="w-5 h-5 text-primary" />
+                    Move History
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={handleUndo} disabled={!canUndo}>
+                    <Undo className="mr-2 h-4 w-4" /> Undo
+                </Button>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-48 w-full">
+                    <div className="space-y-2 font-code text-sm">
+                        {history.slice(1).map((entry, index) => (
+                            <div key={index} className="flex gap-4 p-1 rounded-md bg-muted/50">
+                                <span className="font-bold">{index + 1}.</span>
+                                <span className="capitalize">{entry.player}</span>
+                                <span>{entry.move ? `${rowLabels[entry.move.row]}${entry.move.col + 1}` : 'N/A'}</span>
+                            </div>
+                        ))}
+                         {history.length <= 1 && (
+                            <p className="text-muted-foreground text-center p-4">No moves yet.</p>
+                         )}
+                    </div>
+                </ScrollArea>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium flex items-center gap-2">
