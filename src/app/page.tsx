@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy, Star } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, getFlipsForMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -23,12 +23,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2 } from 'lucide-react';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-interface RateMoveOutput {
-  rating: number;
-  analysis: string;
-}
-
 
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
   const [state, setState] = useState<T>(() => {
@@ -82,8 +76,6 @@ export default function Home() {
   const [gameAnalysis, setGameAnalysis] = useState<AnalyzeGameOutput | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   
-  const [moveReview, setMoveReview] = useState<RateMoveOutput | null>(null);
-  const [reviewLoading, setReviewLoading] = useState(false);
 
   const [trainingData, setTrainingData] = useState([
     { games: 10, aiWins: 4, opponentWins: 6 },
@@ -100,60 +92,6 @@ export default function Home() {
   const playSound = (sound: 'place' | 'flip') => {
     // const audio = new Audio(`/sounds/${sound}.wav`);
     // audio.play().catch(e => console.error("Error playing sound:", e));
-  };
-
-  const getMoveRating = (
-    boardBefore: BoardState,
-    player: Player,
-    move: Move,
-    aiDifficulty: number
-  ): RateMoveOutput => {
-    const validMoves = getValidMoves(boardBefore, player);
-    if (validMoves.length === 0) {
-      return { rating: 0, analysis: "No moves were available." };
-    }
-
-    // Use minimax to find the best possible move and its score
-    const { score: bestScore } = minimax(boardBefore, aiDifficulty, true, player);
-
-    // Evaluate all possible moves to find the range of outcomes
-    const moveScores = validMoves.map(currentMove => {
-      const tempBoard = applyMove(boardBefore, player, currentMove.row, currentMove.col);
-      const { score } = minimax(tempBoard, aiDifficulty > 1 ? aiDifficulty - 1 : 1, false, getOpponent(player));
-      return { ...currentMove, score };
-    });
-
-    const worstScore = Math.min(...moveScores.map(m => m.score));
-    
-    // Evaluate the score of the board *after* the player's move, from the perspective of the opponent.
-    const evaluationOfPlayerMove = moveScores.find(m => m.row === move.row && m.col === move.col)?.score ?? worstScore;
-    
-    // Normalize the player's move score to a 0-1 range
-    let normalizedScore = 0;
-    if (bestScore > worstScore) {
-      // Normalize score based on where it falls between the worst and best possible scores
-      normalizedScore = (evaluationOfPlayerMove - worstScore) / (bestScore - worstScore);
-    } else if (bestScore === worstScore) {
-       normalizedScore = 1; // Only one move was possible, so it must be the best.
-    }
-    
-    // Convert to a 5-star rating, ensuring it's at least 1
-    const rating = Math.max(1, Math.round(normalizedScore * 4) + 1);
-
-    let analysis = "";
-    if (rating >= 5) {
-        analysis = "Excellent! You found the optimal move.";
-    } else if (rating >= 4) {
-        analysis = "Great move! Very strong play.";
-    } else if (rating >= 3) {
-        analysis = "Good move, but there was a better option.";
-    } else if (rating >= 2) {
-        analysis = "A decent move, but it has drawbacks.";
-    } else {
-        analysis = "This move might be a mistake.";
-    }
-
-    return { rating, analysis };
   };
 
 
@@ -205,18 +143,6 @@ export default function Home() {
     setCurrentPlayer(getOpponent(currentPlayer));
     setSuggestion(null);
 
-    // After player's move, get the AI review
-    setReviewLoading(true);
-    setMoveReview(null);
-    try {
-        const review = getMoveRating(boardBeforeMove, playerMakingMove, move, difficulty);
-        setMoveReview(review);
-    } catch (error) {
-        console.error("Error getting move review:", error);
-        setMoveReview(null);
-    } finally {
-        setReviewLoading(false);
-    }
   }
 
   const handleCellClick = (move: Move) => {
@@ -237,7 +163,6 @@ export default function Home() {
     setLastMove(null);
     setHistory([{board: initialBoard, player: startPlayer, move: null}]);
     setGameAnalysis(null);
-    setMoveReview(null);
   }
 
   const startPlayerVsAiGame = (player: Player) => {
@@ -403,7 +328,6 @@ export default function Home() {
         setHistory(newHistory);
         setSuggestion(null);
         setVisualization(null);
-        setMoveReview(null);
     }
   };
 
@@ -570,47 +494,6 @@ export default function Home() {
                 </ScrollArea>
             </CardContent>
           </Card>
-          {gameMode === 'playerVsAi' && (
-             <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium flex items-center gap-2">
-                        <Trophy className="w-5 h-5 text-primary" />
-                        Move Review
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {reviewLoading && (
-                        <div className="flex items-center justify-center h-24">
-                           <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                           <p className="ml-3 text-muted-foreground">Dojo Master is reviewing...</p>
-                        </div>
-                    )}
-                    {!reviewLoading && moveReview && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-center gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star
-                                        key={i}
-                                        className={`w-8 h-8 ${i < moveReview.rating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground/50'}`}
-                                    />
-                                ))}
-                            </div>
-                            <p className="text-center text-muted-foreground text-sm font-code">{moveReview.analysis}</p>
-                        </div>
-                    )}
-                     {!reviewLoading && !moveReview && gameState === 'playing' && (
-                        <p className="text-muted-foreground text-center text-sm h-24 flex items-center justify-center">
-                            Make a move to see the Dojo Master's review.
-                        </p>
-                    )}
-                     {!reviewLoading && !moveReview && gameState !== 'playing' && (
-                        <p className="text-muted-foreground text-center text-sm h-24 flex items-center justify-center">
-                            Start a game to use the move review feature.
-                        </p>
-                    )}
-                </CardContent>
-              </Card>
-          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
