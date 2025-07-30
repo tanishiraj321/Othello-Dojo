@@ -11,17 +11,17 @@ interface PieceProps {
 }
 
 const Piece = React.memo(({ color, isFlipping }: PieceProps) => {
-    // If the piece is white, we want it to start rotated 180deg so the white face shows.
-    // The flip animation will then rotate it to 360deg (which looks like 0), revealing the black face.
-    const initialRotation = color === 'white' ? 180 : 0;
-    const targetRotation = initialRotation + 180;
+    // A black piece is at 0deg. A white piece is at 180deg.
+    // When flipping, we rotate to the opposite state.
+    const rotation = color === 'white' ? 180 : 0;
+    const targetRotation = isFlipping ? (rotation === 0 ? 180 : 0) : rotation;
     
     return (
         <div 
             className={cn("relative w-full h-full duration-500")} 
             style={{ 
                 transformStyle: 'preserve-3d', 
-                transform: `rotateY(${isFlipping ? targetRotation : initialRotation}deg)` 
+                transform: `rotateY(${targetRotation}deg)` 
             }}
         >
             <div className="absolute w-full h-full rounded-full bg-black shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg)' }} />
