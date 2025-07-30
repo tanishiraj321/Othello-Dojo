@@ -71,7 +71,7 @@ To run this project locally, you'll need to have Node.js and npm installed.
 
 1.  **Clone the Repository**:
     ```bash
-    git clone [repository-url]
+    git clone https://github.com/Agrannya-Singh/Othello-Dojo
     cd othello-ai-dojo
     ```
 
@@ -82,7 +82,8 @@ To run this project locally, you'll need to have Node.js and npm installed.
     ```
 
 3.  **Set Up Environment Variables**:
-    Create a new file named `.env` in the root of the project. This file is needed for the generative AI features. If you don't intend to use the AI move suggestion or visualization, you can leave this blank.
+    Create a new file named `.env` in the root of the project. This file is needed for the generative AI features. If you don't intend to use the AI  visualization, you can leave this blank.
+    V2 Update: We no longer need GenAI for move suggestion , this is handled by the minimax algorithmn now.
     ```
     GEMINI_API_KEY=YOUR_API_KEY_HERE
     ```
@@ -104,4 +105,4 @@ We welcome contributions and feedback! If you'd like to contribute, report a bug
 
 ## Contact
 
-For any questions or inquiries, please reach out to the development team through the project's repository or via email at `developer@example.com`.
+For any questions or inquiries, please reach out to the development team through the project's repository or via email at `singh.agrannya@gmail.com`.
