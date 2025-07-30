@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
-import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, isValidMove } from '@/lib/othello';
+import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
 import GameInfoPanel from '@/components/game-info-panel';
 import AiPanel from '@/components/ai-panel';
 import WinRateChart from '@/components/win-rate-chart';
-import { suggestGoodMoves, SuggestGoodMovesOutput } from '@/ai/flows/suggest-good-moves';
 import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +29,7 @@ export default function Home() {
   const [difficulty, setDifficulty] = useState(1); // 1: Easy, 3: Medium, 5: Hard
   const [lastMove, setLastMove] = useState<Move | null>(null);
   
-  const [suggestion, setSuggestion] = useState<SuggestGoodMovesOutput | null>(null);
+  const [suggestion, setSuggestion] = useState<{ move: Move; rationale: string; } | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   
   const [visualization, setVisualization] = useState<{ explanation: string } | null>(null);
@@ -97,34 +96,29 @@ export default function Home() {
     setHistory([{board: initialBoard, player: 'black', move: null}]);
   };
   
-  const handleSuggestMove = async (retries = 2) => {
+  const handleSuggestMove = () => {
     setSuggestionLoading(true);
     setSuggestion(null);
-    try {
-      const response = await suggestGoodMoves({
-        boardState: boardToString(board),
-        player: currentPlayer,
-      });
 
-      const { move } = response;
-      if (isValidMove(board, currentPlayer, move.row, move.col)) {
-        setSuggestion(response);
-        const moveString = `${rowLabels[response.move.row]}${response.move.col + 1}`;
+    try {
+      // Use the same minimax logic as the AI opponent to find the best move.
+      const { move } = minimax(board, difficulty, true, currentPlayer);
+
+      if (move) {
+        const moveString = `${rowLabels[move.row]}${move.col + 1}`;
+        const rationale = `The optimal move is ${moveString}. This move was determined by the game's AI to maximize your score and strategic position based on the current board state.`;
+        setSuggestion({ move, rationale });
         toast({
           title: "AI Suggestion",
           description: `The AI suggests moving to ${moveString}.`,
         });
-      } else if (retries > 0) {
-        console.warn("AI suggested an invalid move. Retrying...");
-        await handleSuggestMove(retries - 1);
       } else {
          toast({
-          title: "Error",
-          description: "The AI failed to suggest a valid move.",
+          title: "No Suggestion Available",
+          description: "There are no valid moves to suggest.",
           variant: "destructive",
         });
       }
-
     } catch (error) {
       console.error("Error getting move suggestion:", error);
       toast({
@@ -344,5 +338,4 @@ export default function Home() {
       </main>
     </div>
   );
-
-    
+}
