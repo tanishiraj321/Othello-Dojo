@@ -4,7 +4,7 @@ import type { Player } from '@/types/othello';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { User, Cpu, Bot } from 'lucide-react';
+import { User, Cpu, Bot, Trophy } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,7 @@ interface GameInfoPanelProps {
   score: { black: number; white: number };
   onStartPlayerVsAi: (player: Player) => void;
   onStartAiVsAi: () => void;
+  onReviewGame: () => void;
   userPlayer: Player | null;
   aiIsThinking: boolean;
   difficulty: number;
@@ -53,6 +54,7 @@ export default function GameInfoPanel({
   score,
   onStartPlayerVsAi,
   onStartAiVsAi,
+  onReviewGame,
   userPlayer,
   aiIsThinking,
   difficulty,
@@ -68,7 +70,11 @@ export default function GameInfoPanel({
             return (
                 <div className="text-center">
                     <h3 className="text-xl font-bold text-primary">Game Over</h3>
-                    <p>{winner === 'Draw' ? "It's a draw!" : `${winner} wins!`}</p>
+                    <p className="mb-4">{winner === 'Draw' ? "It's a draw!" : `${winner} wins!`}</p>
+                    <Button onClick={onReviewGame} variant="secondary" className="w-full">
+                        <Trophy className="mr-2 h-4 w-4" />
+                        Review Game with AI
+                    </Button>
                 </div>
             )
         }

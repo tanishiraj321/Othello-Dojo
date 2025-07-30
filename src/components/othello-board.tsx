@@ -14,7 +14,7 @@ const Piece = React.memo(({ color, isFlipping }: PieceProps) => {
     // A black piece is at 0deg. A white piece is at 180deg.
     // When flipping, we rotate to the opposite state.
     const rotation = color === 'white' ? 180 : 0;
-    const targetRotation = isFlipping ? (rotation === 0 ? 180 : 0) : rotation;
+    const targetRotation = isFlipping ? rotation + 180 : rotation;
     
     return (
         <div 

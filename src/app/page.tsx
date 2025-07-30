@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, getFlipsForMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -11,11 +11,14 @@ import GameInfoPanel from '@/components/game-info-panel';
 import AiPanel from '@/components/ai-panel';
 import WinRateChart from '@/components/win-rate-chart';
 import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization';
+import { analyzeGame, AnalyzeGameOutput } from '@/ai/flows/game-analysis';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { minimax } from '@/lib/minimax';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -66,6 +69,10 @@ export default function Home() {
   
   const [visualization, setVisualization] = useState<{ explanation: string } | null>(null);
   const [visualizationLoading, setVisualizationLoading] = useState(false);
+
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [gameAnalysis, setGameAnalysis] = useState<AnalyzeGameOutput | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   
   const [trainingData, setTrainingData] = useState([
     { games: 10, aiWins: 4, opponentWins: 6 },
@@ -116,7 +123,10 @@ export default function Home() {
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
     const flipped = getFlipsForMove(board, currentPlayer, move.row, move.col);
     
-    setFlippingPieces(flipped);
+    // Animate the flip. The piece component is memoized so this will only re-render the flipping pieces.
+    const targetRotation = board[move.row][move.col] === 'white' ? 0 : 180;
+    setFlippingPieces(flipped.map(p => ({...p, targetRotation})));
+    
     setTimeout(() => setFlippingPieces([]), 500);
 
     playSound('place');
@@ -148,6 +158,7 @@ export default function Home() {
     setVisualization(null);
     setLastMove(null);
     setHistory([{board: initialBoard, player: startPlayer, move: null}]);
+    setGameAnalysis(null);
   }
 
   const startPlayerVsAiGame = (player: Player) => {
@@ -235,6 +246,41 @@ export default function Home() {
     }
   };
   
+  const handleReviewGame = async () => {
+    if (history.length <= 1) return;
+    setAnalysisLoading(true);
+    setIsReviewDialogOpen(true);
+    setGameAnalysis(null);
+
+    try {
+        const moveHistoryStr = history.slice(1).map((entry, index) => 
+            `${index + 1}. ${entry.player} ${entry.move ? `${rowLabels[entry.move.row]}${entry.move.col + 1}` : 'N/A'}`
+        ).join(', ');
+
+        const finalScore = getScore(board);
+        const winner = finalScore.black > finalScore.white ? 'black' : finalScore.white > finalScore.black ? 'white' : 'draw';
+        const finalScoreStr = `Black: ${finalScore.black}, White: ${finalScore.white}`;
+
+        const response = await analyzeGame({
+            moveHistory: moveHistoryStr,
+            winner: winner,
+            finalScore: finalScoreStr,
+        });
+
+        setGameAnalysis(response);
+    } catch (error) {
+        console.error("Error analyzing game:", error);
+        toast({
+            title: "Analysis Failed",
+            description: "Could not get game analysis from the AI. Please try again.",
+            variant: "destructive",
+        });
+        setIsReviewDialogOpen(false);
+    } finally {
+        setAnalysisLoading(false);
+    }
+};
+
   const runNewTrainingSession = () => {
     if (gameMode === 'playerVsAi' && userPlayer) {
       startPlayerVsAiGame(userPlayer);
@@ -301,7 +347,7 @@ export default function Home() {
   
             if(bestMove){
                 const flipped = getFlipsForMove(board, aiColor, bestMove.row, bestMove.col);
-                setFlippingPieces(flipped);
+                setFlippingPieces(flipped.map(p => ({...p})));
                 setTimeout(() => setFlippingPieces([]), 500);
                 
                 playSound('place');
@@ -374,6 +420,7 @@ export default function Home() {
             onAi1DifficultyChange={setAi1Difficulty}
             ai2Difficulty={ai2Difficulty}
             onAi2DifficultyChange={setAi2Difficulty}
+            onReviewGame={handleReviewGame}
           />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -456,6 +503,48 @@ export default function Home() {
           </Card>
         </div>
       </main>
+
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-2xl">
+                      <Trophy className="w-6 h-6 text-primary" />
+                      Post-Game Analysis
+                  </DialogTitle>
+                  <DialogDescription>
+                      Here's the AI coach's review of your last game.
+                  </DialogDescription>
+              </DialogHeader>
+              {analysisLoading && (
+                  <div className="flex items-center justify-center h-48">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <p className="ml-4 text-muted-foreground">The AI is analyzing your game...</p>
+                  </div>
+              )}
+              {gameAnalysis && (
+                  <ScrollArea className="max-h-[60vh] pr-4">
+                    <div className="space-y-6 text-sm">
+                        <div className="space-y-2">
+                            <h3 className="font-semibold text-lg text-primary">Overall Feedback</h3>
+                            <p className="text-muted-foreground">{gameAnalysis.overallFeedback}</p>
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-semibold text-lg text-primary">Opening Summary</h3>
+                            <p className="text-muted-foreground">{gameAnalysis.openingSummary}</p>
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-semibold text-lg text-primary">Mid-Game Turning Point</h3>
+                            <p className="text-muted-foreground">{gameAnalysis.midGameTurningPoint}</p>
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-semibold text-lg text-primary">End-Game Recap</h3>
+                            <p className="text-muted-foreground">{gameAnalysis.endGameRecap}</p>
+                        </div>
+                    </div>
+                  </ScrollArea>
+              )}
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
