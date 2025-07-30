@@ -129,7 +129,7 @@ export default function Home() {
       console.error("Error getting move suggestion:", error);
       toast({
         title: "Error",
-        description: "Could not get a move suggestion.",
+        description: "Could not get a move suggestion. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -344,4 +344,5 @@ export default function Home() {
       </main>
     </div>
   );
-}
+
+    
