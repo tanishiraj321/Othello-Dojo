@@ -4,7 +4,7 @@ import type { Player } from '@/types/othello';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { User, Cpu, Bot, Trophy } from 'lucide-react';
+import { User, Cpu, Bot, Trophy, RefreshCw } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,6 +18,7 @@ interface GameInfoPanelProps {
   onStartPlayerVsAi: (player: Player) => void;
   onStartAiVsAi: () => void;
   onReviewGame: () => void;
+  onResetGame: () => void;
   userPlayer: Player | null;
   aiIsThinking: boolean;
   difficulty: number;
@@ -55,6 +56,7 @@ export default function GameInfoPanel({
   onStartPlayerVsAi,
   onStartAiVsAi,
   onReviewGame,
+  onResetGame,
   userPlayer,
   aiIsThinking,
   difficulty,
@@ -191,11 +193,9 @@ export default function GameInfoPanel({
 
         { (gameState === 'menu' || gameState === 'gameOver') && renderMenu() }
         { (gameState === 'playing' && gameState !== 'gameOver') && (
-            <Button className="w-full" variant="outline" onClick={() => {
-                if(gameMode === 'playerVsAi' && userPlayer) onStartPlayerVsAi(userPlayer)
-                else onStartAiVsAi()
-            }}>
-                Start New Game
+            <Button className="w-full" variant="outline" onClick={onResetGame}>
+                 <RefreshCw className="mr-2 h-4 w-4" />
+                Reset Game
             </Button>
         )}
       </CardContent>

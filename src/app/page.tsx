@@ -154,27 +154,42 @@ export default function Home() {
     handlePlayerMove(move);
   };
   
-  const resetGame = (initialBoard: BoardState, startPlayer: Player) => {
+  const resetGame = () => {
+    const initialBoard = createInitialBoard();
     setBoard(initialBoard);
-    setCurrentPlayer(startPlayer);
-    setGameState('playing');
+    setCurrentPlayer('black');
+    setGameState('menu');
     setSuggestion(null);
     setVisualization(null);
     setLastMove(null);
-    setHistory([{board: initialBoard, player: startPlayer, move: null}]);
+    setHistory([{board: initialBoard, player: 'black', move: null}]);
     setGameAnalysis(null);
   }
 
   const startPlayerVsAiGame = (player: Player) => {
     const initialBoard = createInitialBoard();
-    resetGame(initialBoard, 'black');
+    setBoard(initialBoard);
+    setCurrentPlayer('black');
+    setGameState('playing');
+    setSuggestion(null);
+    setVisualization(null);
+    setLastMove(null);
+    setHistory([{board: initialBoard, player: 'black', move: null}]);
+    setGameAnalysis(null);
     setUserPlayer(player);
     setGameMode('playerVsAi');
   };
 
   const startAiVsAiGame = () => {
     const initialBoard = createInitialBoard();
-    resetGame(initialBoard, 'black');
+    setBoard(initialBoard);
+    setCurrentPlayer('black');
+    setGameState('playing');
+    setSuggestion(null);
+    setVisualization(null);
+    setLastMove(null);
+    setHistory([{board: initialBoard, player: 'black', move: null}]);
+    setGameAnalysis(null);
     setUserPlayer(null);
     setGameMode('aiVsAi');
   };
@@ -314,7 +329,14 @@ export default function Home() {
     const movesToUndo = (userPlayer === currentPlayer) ? 1 : 2;
     if (history.length <= movesToUndo) {
         const initialBoard = createInitialBoard();
-        resetGame(initialBoard, 'black');
+        setBoard(initialBoard);
+        setCurrentPlayer('black');
+        setGameState('playing');
+        setSuggestion(null);
+        setVisualization(null);
+        setLastMove(null);
+        setHistory([{board: initialBoard, player: 'black', move: null}]);
+        setGameAnalysis(null);
         return;
     }
     
@@ -425,6 +447,7 @@ export default function Home() {
             ai2Difficulty={ai2Difficulty}
             onAi2DifficultyChange={setAi2Difficulty}
             onReviewGame={handleReviewGame}
+            onResetGame={resetGame}
           />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
