@@ -14,7 +14,7 @@ function evaluateBoard(board: BoardState, player: Player): number {
     [0, 0], [0, 7], [7, 0], [7, 7]
   ];
   let cornerBonus = 0;
-  const cornerWeight = 25;
+  const cornerWeight = 50; // Increased weight for corners
   corners.forEach(([r, c]) => {
     if (board[r][c] === player) {
         cornerBonus += cornerWeight;
@@ -46,8 +46,35 @@ function evaluateBoard(board: BoardState, player: Player): number {
     if (board[i][7] === opponent) edgeBonus -= edgeWeight;
   }
 
+  // 5. Corner Adjacent Penalty ("X-squares")
+  let xSquarePenalty = 0;
+  const xSquareWeight = 30;
+  const xSquares = [
+    [1, 1], [1, 6], [6, 1], [6, 6] // Diagonally adjacent to corners
+  ];
+  xSquares.forEach(([r, c]) => {
+      // Only apply penalty if the adjacent corner is empty
+      if (r === 1 && c === 1 && board[0][0] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+      if (r === 1 && c === 6 && board[0][7] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+      if (r === 6 && c === 1 && board[7][0] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+      if (r === 6 && c === 6 && board[7][7] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+  });
+
+
   // Combine heuristics into a final score
-  const finalScore = pieceDifference + cornerBonus + (mobility * mobilityWeight) + edgeBonus;
+  const finalScore = pieceDifference + cornerBonus + (mobility * mobilityWeight) + edgeBonus + xSquarePenalty;
 
   return finalScore;
 }
