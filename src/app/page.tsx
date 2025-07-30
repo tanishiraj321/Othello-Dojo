@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -252,7 +253,7 @@ export default function Home() {
             }
           }
           setAiIsThinking(false);
-        }, 500);
+        }, 1000);
       }
     };
   
@@ -273,7 +274,7 @@ export default function Home() {
           }
         }
         setAiIsThinking(false);
-      }, 3000); // 3-second delay for visualization
+      }, 1000); // 1-second delay for visualization
     };
   
     if (gameMode === 'playerVsAi') {
