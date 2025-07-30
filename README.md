@@ -27,6 +27,8 @@ This project was built with the help of an AI coding assistant and utilizes a mo
 
 ## How It Works
 
+<img width="1152" height="629" alt="image" src="https://raw.githubusercontent.com/Agrannya-Singh/Othello-Dojo/refs/heads/Main/diagram-export-7-30-2025-5_11_35-PM.png">
+
 ### Core Game Logic (`src/lib/othello.ts`)
 
 The fundamental rules of Othello are implemented in pure TypeScript. This includes functions for:
@@ -56,7 +58,10 @@ The UI is built with React components, many of which are styled using ShadCN UI.
 - **`ai-panel.tsx`**: Contains the buttons for interacting with the generative AI features (suggestions, visualization).
 - **`win-rate-chart.tsx`**: A chart component (using Recharts) that displays the simulated training data.
 
+- Updates in V2.0
+
 - <img width="1152" height="629" alt="image" src="https://github.com/user-attachments/assets/9b731747-9a65-4a84-acc5-eda4f7da0f0f" />
+
 
 
 
