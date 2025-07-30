@@ -87,7 +87,7 @@ export default function OthelloBoard({ board, onCellClick, validMoves, suggested
                                 <div className="w-1/3 h-1/3 bg-primary/50 rounded-full" />
                             )}
                             {isSuggestedMove && (
-                                <div className="absolute inset-0 bg-red-500/50 rounded-full animate-pulse" />
+                                <div className="absolute inset-0 border-2 border-red-500 rounded-full animate-pulse" />
                             )}
                             {isLastMove && (
                                 <div className="absolute w-2.5 h-2.5 bg-blue-400 rounded-full shadow-[0_0_8px_theme(colors.blue.400)]" />

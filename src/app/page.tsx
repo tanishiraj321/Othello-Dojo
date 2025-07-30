@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy, Star } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, getFlipsForMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -11,7 +12,10 @@ import GameInfoPanel from '@/components/game-info-panel';
 import AiPanel from '@/components/ai-panel';
 import WinRateChart from '@/components/win-rate-chart';
 import { visualizeAiDecision } from '@/ai/flows/real-time-decision-visualization';
-import { analyzeGame, AnalyzeGameOutput } from '@/ai/flows/game-analysis';
+import { analyzeGame } from '@/ai/flows/game-analysis';
+import type { AnalyzeGameOutput } from '@/ai/flows/game-analysis';
+import { rateMove } from '@/ai/flows/rate-move';
+import type { RateMoveOutput } from '@/ai/flows/rate-move';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { minimax } from '@/lib/minimax';
@@ -74,6 +78,9 @@ export default function Home() {
   const [gameAnalysis, setGameAnalysis] = useState<AnalyzeGameOutput | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   
+  const [moveReview, setMoveReview] = useState<RateMoveOutput | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
   const [trainingData, setTrainingData] = useState([
     { games: 10, aiWins: 4, opponentWins: 6 },
     { games: 20, aiWins: 7, opponentWins: 13 },
@@ -87,8 +94,8 @@ export default function Home() {
   const [flippingPieces, setFlippingPieces] = useState<Move[]>([]);
   
   const playSound = (sound: 'place' | 'flip') => {
-    const audio = new Audio(`/sounds/${sound}.wav`);
-    audio.play().catch(e => console.error("Error playing sound:", e));
+    // const audio = new Audio(`/sounds/${sound}.wav`);
+    // audio.play().catch(e => console.error("Error playing sound:", e));
   };
 
 
@@ -119,14 +126,14 @@ export default function Home() {
     }
   }, [board, currentPlayer, gameState, updateGameData]);
   
-  const handlePlayerMove = (move: Move) => {
+  const handlePlayerMove = async (move: Move) => {
+    const boardBeforeMove = board;
+    const playerMakingMove = currentPlayer;
+    
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
     const flipped = getFlipsForMove(board, currentPlayer, move.row, move.col);
     
-    // Animate the flip. The piece component is memoized so this will only re-render the flipping pieces.
-    const targetRotation = board[move.row][move.col] === 'white' ? 0 : 180;
-    setFlippingPieces(flipped.map(p => ({...p, targetRotation})));
-    
+    setFlippingPieces(flipped.map(p => ({...p})));
     setTimeout(() => setFlippingPieces([]), 500);
 
     playSound('place');
@@ -134,11 +141,28 @@ export default function Home() {
       setTimeout(() => playSound('flip'), 200);
     }
 
-    setHistory(prev => [...prev, {board, player: currentPlayer, move}]);
+    setHistory(prev => [...prev, {board: boardBeforeMove, player: currentPlayer, move}]);
     setBoard(newBoard);
     setLastMove(move);
     setCurrentPlayer(getOpponent(currentPlayer));
     setSuggestion(null);
+
+    // After player's move, get the AI review
+    setReviewLoading(true);
+    try {
+        const review = await rateMove({
+            boardBefore: boardBeforeMove,
+            player: playerMakingMove,
+            difficulty: difficulty,
+            move: move,
+        } as any);
+        setMoveReview(review);
+    } catch (error) {
+        console.error("Error getting move review:", error);
+        setMoveReview(null);
+    } finally {
+        setReviewLoading(false);
+    }
   }
 
   const handleCellClick = (move: Move) => {
@@ -159,6 +183,7 @@ export default function Home() {
     setLastMove(null);
     setHistory([{board: initialBoard, player: startPlayer, move: null}]);
     setGameAnalysis(null);
+    setMoveReview(null);
   }
 
   const startPlayerVsAiGame = (player: Player) => {
@@ -324,6 +349,7 @@ export default function Home() {
         setHistory(newHistory);
         setSuggestion(null);
         setVisualization(null);
+        setMoveReview(null);
     }
   };
 
@@ -373,7 +399,7 @@ export default function Home() {
       handleAiMove(currentAiDifficulty, currentPlayer);
     }
   
-  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty, gameMode, ai1Difficulty, ai2Difficulty, handlePlayerMove]);
+  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty, gameMode, ai1Difficulty, ai2Difficulty, setBoard, setCurrentPlayer, setHistory, setLastMove, setFlippingPieces]);
 
   const displayedSuggestion = suggestion && (
     <div className="text-sm p-3 bg-muted rounded-md space-y-1">
@@ -490,6 +516,48 @@ export default function Home() {
                 </ScrollArea>
             </CardContent>
           </Card>
+          {gameMode === 'playerVsAi' && (
+             <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-medium flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-primary" />
+                        Move Review
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {reviewLoading && (
+                        <div className="flex items-center justify-center h-24">
+                           <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                           <p className="ml-3 text-muted-foreground">AI is reviewing your move...</p>
+                        </div>
+                    )}
+                    {!reviewLoading && moveReview && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-center gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star
+                                        key={i}
+                                        className={`w-8 h-8 ${i < moveReview.rating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground/50'}`}
+                                    />
+                                ))}
+                            </div>
+                            <p className="text-center text-muted-foreground text-sm font-code">{moveReview.analysis}</p>
+                        </div>
+                    )}
+                     {!reviewLoading && !moveReview && gameState === 'playing' && (
+                        <p className="text-muted-foreground text-center text-sm h-24 flex items-center justify-center">
+                            Make a move to see the AI's review of your play.
+                        </p>
+                    )}
+                     {!reviewLoading && !moveReview && gameState !== 'playing' && (
+                        <p className="text-muted-foreground text-center text-sm h-24 flex items-center justify-center">
+                            Start a game to use the move review feature.
+                        </p>
+                    )}
+                </CardContent>
+              </Card>
+          )}
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium flex items-center gap-2">
