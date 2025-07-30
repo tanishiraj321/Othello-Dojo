@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
-import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString } from '@/lib/othello';
+import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, getFlipsForMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
 import GameInfoPanel from '@/components/game-info-panel';
 import AiPanel from '@/components/ai-panel';
@@ -19,18 +19,46 @@ import { Button } from '@/components/ui/button';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
+const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+  const [state, setState] = useState<T>(() => {
+    if (typeof window === 'undefined') {
+      return defaultValue;
+    }
+    try {
+      const storedValue = window.localStorage.getItem(key);
+      return storedValue ? JSON.parse(storedValue) : defaultValue;
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error);
+      return defaultValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, state]);
+
+  return [state, setState];
+};
+
+
 export default function Home() {
-  const [board, setBoard] = useState<BoardState>(createInitialBoard());
-  const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
-  const [userPlayer, setUserPlayer] = useState<Player | null>('black');
+  const [board, setBoard] = usePersistentState<BoardState>('othello-board', createInitialBoard());
+  const [currentPlayer, setCurrentPlayer] = usePersistentState<Player>('othello-currentPlayer', 'black');
+  const [userPlayer, setUserPlayer] = usePersistentState<Player | null>('othello-userPlayer', 'black');
+  const [score, setScore] = usePersistentState('othello-score', { black: 2, white: 2 });
+  const [gameState, setGameState] = usePersistentState<'menu' | 'playing' | 'gameOver'>('othello-gameState', 'menu');
+  const [gameMode, setGameMode] = usePersistentState<'playerVsAi' | 'aiVsAi'>('othello-gameMode', 'playerVsAi');
+  const [difficulty, setDifficulty] = usePersistentState('othello-difficulty', 1);
+  const [ai1Difficulty, setAi1Difficulty] = usePersistentState('othello-ai1Difficulty', 1);
+  const [ai2Difficulty, setAi2Difficulty] = usePersistentState('othello-ai2Difficulty', 1);
+  const [history, setHistory] = usePersistentState<{board: BoardState, player: Player, move: Move | null}[]>('othello-history', []);
+  
   const [validMoves, setValidMoves] = useState<Move[]>([]);
-  const [score, setScore] = useState({ black: 2, white: 2 });
-  const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
-  const [gameMode, setGameMode] = useState<'playerVsAi' | 'aiVsAi'>('playerVsAi');
   const [aiIsThinking, setAiIsThinking] = useState(false);
-  const [difficulty, setDifficulty] = useState(1); // Player vs AI difficulty
-  const [ai1Difficulty, setAi1Difficulty] = useState(1);
-  const [ai2Difficulty, setAi2Difficulty] = useState(1);
   const [lastMove, setLastMove] = useState<Move | null>(null);
   
   const [suggestion, setSuggestion] = useState<{ move: Move; rationale: string; } | null>(null);
@@ -47,8 +75,15 @@ export default function Home() {
     { games: 50, aiWins: 35, opponentWins: 15 },
   ]);
 
-  const [history, setHistory] = useState<{board: BoardState, player: Player, move: Move | null}[]>([]);
   const { toast } = useToast();
+  
+  const [flippingPieces, setFlippingPieces] = useState<Move[]>([]);
+  
+  const playSound = (sound: 'place' | 'flip') => {
+    const audio = new Audio(`/sounds/${sound}.wav`);
+    audio.play().catch(e => console.error("Error playing sound:", e));
+  };
+
 
   const updateGameData = useCallback((currentBoard: BoardState, player: Player) => {
     const newValidMoves = getValidMoves(currentBoard, player);
@@ -68,7 +103,7 @@ export default function Home() {
         setCurrentPlayer(opponent);
       }
     }
-  }, [toast]);
+  }, [toast, setScore, setGameState, setCurrentPlayer]);
 
 
   useEffect(() => {
@@ -77,44 +112,56 @@ export default function Home() {
     }
   }, [board, currentPlayer, gameState, updateGameData]);
   
+  const handlePlayerMove = (move: Move) => {
+    const newBoard = applyMove(board, currentPlayer, move.row, move.col);
+    const flipped = getFlipsForMove(board, currentPlayer, move.row, move.col);
+    
+    setFlippingPieces(flipped);
+    setTimeout(() => setFlippingPieces([]), 500);
+
+    playSound('place');
+    if (flipped.length > 0) {
+      setTimeout(() => playSound('flip'), 200);
+    }
+
+    setHistory(prev => [...prev, {board, player: currentPlayer, move}]);
+    setBoard(newBoard);
+    setLastMove(move);
+    setCurrentPlayer(getOpponent(currentPlayer));
+    setSuggestion(null);
+  }
+
   const handleCellClick = (move: Move) => {
     if (gameState !== 'playing' || currentPlayer !== userPlayer || aiIsThinking || gameMode === 'aiVsAi') return;
     
     const isMoveValid = validMoves.some(m => m.row === move.row && m.col === move.col);
     if (!isMoveValid) return;
 
-    const newBoard = applyMove(board, currentPlayer, move.row, move.col);
-    setHistory(prev => [...prev, {board, player: currentPlayer, move}]);
-    setBoard(newBoard);
-    setLastMove(move);
-    setCurrentPlayer(getOpponent(currentPlayer));
-    setSuggestion(null);
+    handlePlayerMove(move);
   };
-
-  const startPlayerVsAiGame = (player: Player) => {
-    const initialBoard = createInitialBoard();
+  
+  const resetGame = (initialBoard: BoardState, startPlayer: Player) => {
     setBoard(initialBoard);
-    setUserPlayer(player);
-    setCurrentPlayer('black');
+    setCurrentPlayer(startPlayer);
     setGameState('playing');
-    setGameMode('playerVsAi');
     setSuggestion(null);
     setVisualization(null);
     setLastMove(null);
-    setHistory([{board: initialBoard, player: 'black', move: null}]);
+    setHistory([{board: initialBoard, player: startPlayer, move: null}]);
+  }
+
+  const startPlayerVsAiGame = (player: Player) => {
+    const initialBoard = createInitialBoard();
+    resetGame(initialBoard, 'black');
+    setUserPlayer(player);
+    setGameMode('playerVsAi');
   };
 
   const startAiVsAiGame = () => {
     const initialBoard = createInitialBoard();
-    setBoard(initialBoard);
+    resetGame(initialBoard, 'black');
     setUserPlayer(null);
-    setCurrentPlayer('black');
-    setGameState('playing');
     setGameMode('aiVsAi');
-    setSuggestion(null);
-    setVisualization(null);
-    setLastMove(null);
-    setHistory([{board: initialBoard, player: 'black', move: null}]);
   };
   
   const handleSuggestMove = () => {
@@ -193,6 +240,8 @@ export default function Home() {
       startPlayerVsAiGame(userPlayer);
     } else if (gameMode === 'aiVsAi') {
       startAiVsAiGame();
+    } else {
+      setGameState('menu');
     }
     setTrainingData(prev => prev.map(d => ({
         ...d,
@@ -211,7 +260,14 @@ export default function Home() {
       return;
     }
   
-    const movesToUndo = (userPlayer === 'black' && currentPlayer === 'black') || (userPlayer === 'white' && currentPlayer === 'white') ? 2 : 1;
+    // In Player vs AI, undoing your move should also undo the AI's subsequent move.
+    const movesToUndo = (userPlayer === currentPlayer) ? 1 : 2;
+    if (history.length <= movesToUndo) {
+        const initialBoard = createInitialBoard();
+        resetGame(initialBoard, 'black');
+        return;
+    }
+    
     const newHistory = history.slice(0, -(movesToUndo));
     const lastPlayerState = newHistory[newHistory.length - 1];
 
@@ -236,54 +292,42 @@ export default function Home() {
   useEffect(() => {
     if (gameState !== 'playing' || aiIsThinking) return;
   
-    const handlePlayerVsAiMove = () => {
-      if (currentPlayer === aiPlayer) {
+    const handleAiMove = (aiDifficulty: number, aiColor: Player) => {
         setAiIsThinking(true);
         setTimeout(() => {
-          const moves = getValidMoves(board, aiPlayer);
+          const moves = getValidMoves(board, aiColor);
           if (moves.length > 0) {
-            const { move: bestMove } = minimax(board, difficulty, true, aiPlayer);
+            const { move: bestMove } = minimax(board, aiDifficulty, true, aiColor);
   
             if(bestMove){
+                const flipped = getFlipsForMove(board, aiColor, bestMove.row, bestMove.col);
+                setFlippingPieces(flipped);
+                setTimeout(() => setFlippingPieces([]), 500);
+                
+                playSound('place');
+                if (flipped.length > 0) {
+                    setTimeout(() => playSound('flip'), 200);
+                }
+
               setHistory(prev => [...prev, {board, player: currentPlayer, move: bestMove}]);
-              const newBoard = applyMove(board, aiPlayer, bestMove.row, bestMove.col);
+              const newBoard = applyMove(board, aiColor, bestMove.row, bestMove.col);
               setBoard(newBoard);
               setLastMove(bestMove);
-              setCurrentPlayer(userPlayer as Player);
+              setCurrentPlayer(getOpponent(aiColor));
             }
           }
           setAiIsThinking(false);
         }, 1000);
-      }
-    };
-  
-    const handleAiVsAiMove = () => {
-      setAiIsThinking(true);
-      setTimeout(() => {
-        const moves = getValidMoves(board, currentPlayer);
-        if (moves.length > 0) {
-          const currentAiDifficulty = currentPlayer === 'black' ? ai1Difficulty : ai2Difficulty;
-          const { move: bestMove } = minimax(board, currentAiDifficulty, true, currentPlayer);
-  
-          if(bestMove){
-            setHistory(prev => [...prev, {board, player: currentPlayer, move: bestMove}]);
-            const newBoard = applyMove(board, currentPlayer, bestMove.row, bestMove.col);
-            setBoard(newBoard);
-            setLastMove(bestMove);
-            setCurrentPlayer(getOpponent(currentPlayer));
-          }
-        }
-        setAiIsThinking(false);
-      }, 1000); // 1-second delay for visualization
-    };
-  
-    if (gameMode === 'playerVsAi') {
-      handlePlayerVsAiMove();
-    } else if (gameMode === 'aiVsAi') {
-      handleAiVsAiMove();
     }
   
-  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty, gameMode, ai1Difficulty, ai2Difficulty]);
+    if (gameMode === 'playerVsAi' && currentPlayer === aiPlayer) {
+      handleAiMove(difficulty, aiPlayer);
+    } else if (gameMode === 'aiVsAi') {
+      const currentAiDifficulty = currentPlayer === 'black' ? ai1Difficulty : ai2Difficulty;
+      handleAiMove(currentAiDifficulty, currentPlayer);
+    }
+  
+  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty, gameMode, ai1Difficulty, ai2Difficulty, handlePlayerMove]);
 
   const displayedSuggestion = suggestion && (
     <div className="text-sm p-3 bg-muted rounded-md space-y-1">
@@ -362,6 +406,7 @@ export default function Home() {
             player={userPlayer}
             suggestedMove={suggestion?.move ?? null}
             lastMove={lastMove}
+            flippingPieces={flippingPieces}
           />
         </div>
         
