@@ -27,6 +27,8 @@ This project was built with the help of an AI coding assistant and utilizes a mo
 
 ## How It Works
 
+<img width="1152" height="629" alt="image" src="https://raw.githubusercontent.com/Agrannya-Singh/Othello-Dojo/refs/heads/Main/diagram-export-7-30-2025-5_11_35-PM.png">
+
 ### Core Game Logic (`src/lib/othello.ts`)
 
 The fundamental rules of Othello are implemented in pure TypeScript. This includes functions for:
@@ -56,13 +58,20 @@ The UI is built with React components, many of which are styled using ShadCN UI.
 - **`ai-panel.tsx`**: Contains the buttons for interacting with the generative AI features (suggestions, visualization).
 - **`win-rate-chart.tsx`**: A chart component (using Recharts) that displays the simulated training data.
 
+- Updates in V2.0
+
+- <img width="1152" height="629" alt="image" src="https://github.com/user-attachments/assets/9b731747-9a65-4a84-acc5-eda4f7da0f0f" />
+
+
+
+
 ## Getting Started
 
 To run this project locally, you'll need to have Node.js and npm installed.
 
 1.  **Clone the Repository**:
     ```bash
-    git clone [repository-url]
+    git clone https://github.com/Agrannya-Singh/Othello-Dojo
     cd othello-ai-dojo
     ```
 
@@ -73,7 +82,8 @@ To run this project locally, you'll need to have Node.js and npm installed.
     ```
 
 3.  **Set Up Environment Variables**:
-    Create a new file named `.env` in the root of the project. This file is needed for the generative AI features. If you don't intend to use the AI move suggestion or visualization, you can leave this blank.
+    Create a new file named `.env` in the root of the project. This file is needed for the generative AI features. If you don't intend to use the AI  visualization, you can leave this blank.
+    V2 Update: We no longer need GenAI for move suggestion , this is handled by the minimax algorithmn now.
     ```
     GEMINI_API_KEY=YOUR_API_KEY_HERE
     ```
@@ -95,4 +105,4 @@ We welcome contributions and feedback! If you'd like to contribute, report a bug
 
 ## Contact
 
-For any questions or inquiries, please reach out to the development team through the project's repository or via email at `developer@example.com`.
+For any questions or inquiries, please reach out to the development team through the project's repository or via email at `singh.agrannya@gmail.com`.

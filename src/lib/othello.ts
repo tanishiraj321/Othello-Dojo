@@ -1,3 +1,4 @@
+
 import type { BoardState, Player } from '@/types/othello';
 
 const BOARD_SIZE = 8;
@@ -22,7 +23,7 @@ function isInsideBoard(row: number, col: number): boolean {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
 }
 
-function getFlipsForMove(board: BoardState, player: Player, row: number, col: number): {row: number, col: number}[] {
+export function getFlipsForMove(board: BoardState, player: Player, row: number, col: number): {row: number, col: number}[] {
     if (!isInsideBoard(row, col) || board[row][col] !== 'empty') {
       return [];
     }
@@ -69,7 +70,7 @@ export function getValidMoves(board: BoardState, player: Player): {row: number, 
 export function applyMove(board: BoardState, player: Player, row: number, col: number): BoardState {
   const tilesToFlip = getFlipsForMove(board, player, row, col);
   
-  if (tilesToFlip.length === 0) {
+  if (tilesToFlip.length === 0 && board[row][col] !== 'empty') {
       // This is not a valid move, return the original board
       return board;
   }

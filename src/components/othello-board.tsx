@@ -1,23 +1,45 @@
+
 'use client';
 
 import type { BoardState, Player, Move } from '@/types/othello';
 import { cn } from '@/lib/utils';
+import React from 'react';
 
-const BlackPiece = () => (
-  <div className="w-full h-full rounded-full bg-black shadow-inner" />
-);
+interface PieceProps {
+  color: 'black' | 'white';
+  isFlipping: boolean;
+}
 
-const WhitePiece = () => (
-  <div className="w-full h-full rounded-full bg-white shadow-inner" />
-);
+const Piece = React.memo(({ color, isFlipping }: PieceProps) => {
+    // A black piece is at 0deg. A white piece is at 180deg.
+    // When flipping, we rotate to the opposite state.
+    const rotation = color === 'white' ? 180 : 0;
+    const targetRotation = isFlipping ? rotation + 180 : rotation;
+    
+    return (
+        <div 
+            className={cn("relative w-full h-full duration-500")} 
+            style={{ 
+                transformStyle: 'preserve-3d', 
+                transform: `rotateY(${targetRotation}deg)` 
+            }}
+        >
+            <div className="absolute w-full h-full rounded-full bg-black shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg)' }} />
+            <div className="absolute w-full h-full rounded-full bg-white shadow-inner" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} />
+        </div>
+    );
+});
+Piece.displayName = 'Piece';
+
 
 interface OthelloBoardProps {
   board: BoardState;
   onCellClick: (move: Move) => void;
   validMoves: Move[];
-  player: Player;
+  player: Player | null;
   suggestedMove: Move | null;
   lastMove: Move | null;
+  flippingPieces: Move[];
 }
 
 const GridLabel = ({ label }: { label: string }) => (
@@ -26,7 +48,7 @@ const GridLabel = ({ label }: { label: string }) => (
     </div>
 )
 
-export default function OthelloBoard({ board, onCellClick, validMoves, suggestedMove, lastMove }: OthelloBoardProps) {
+export default function OthelloBoard({ board, onCellClick, validMoves, suggestedMove, lastMove, flippingPieces }: OthelloBoardProps) {
   const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   return (
     <div className="w-full max-w-2xl mx-auto aspect-square">
@@ -47,6 +69,7 @@ export default function OthelloBoard({ board, onCellClick, validMoves, suggested
                     const isMoveValid = validMoves.some(m => m.row === rowIndex && m.col === colIndex);
                     const isSuggestedMove = suggestedMove && suggestedMove.row === rowIndex && suggestedMove.col === colIndex;
                     const isLastMove = lastMove && lastMove.row === rowIndex && lastMove.col === colIndex;
+                    const isFlipping = flippingPieces.some(p => p.row === rowIndex && p.col === colIndex);
                     return (
                         <div
                         key={`${rowIndex}-${colIndex}`}
@@ -56,14 +79,15 @@ export default function OthelloBoard({ board, onCellClick, validMoves, suggested
                         )}
                         onClick={() => onCellClick({ row: rowIndex, col: colIndex })}
                         >
-                        <div className="relative w-full h-full flex items-center justify-center">
-                            {cell === 'black' && <BlackPiece />}
-                            {cell === 'white' && <WhitePiece />}
+                        <div className="relative w-full h-full flex items-center justify-center" style={{perspective: '1000px'}}>
+                            {cell !== 'empty' && (
+                                <Piece color={cell} isFlipping={isFlipping} />
+                            )}
                             {cell === 'empty' && isMoveValid && (
                                 <div className="w-1/3 h-1/3 bg-primary/50 rounded-full" />
                             )}
                             {isSuggestedMove && (
-                                <div className="absolute inset-0 bg-red-500/50 rounded-full animate-pulse" />
+                                <div className="absolute inset-0 border-2 border-red-500 rounded-full animate-pulse" />
                             )}
                             {isLastMove && (
                                 <div className="absolute w-2.5 h-2.5 bg-blue-400 rounded-full shadow-[0_0_8px_theme(colors.blue.400)]" />

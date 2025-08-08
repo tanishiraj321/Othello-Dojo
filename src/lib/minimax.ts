@@ -1,31 +1,80 @@
 import type { BoardState, Player, Move } from '@/types/othello';
 import { getValidMoves, applyMove, getOpponent, getScore } from './othello';
 
-// An improved evaluation function that considers piece difference and corners.
+// An improved evaluation function that considers piece difference, corners, mobility and edge control.
 function evaluateBoard(board: BoardState, player: Player): number {
   const score = getScore(board);
   const opponent = getOpponent(player);
   
-  // Base score is the difference in pieces
-  let finalScore = score[player] - score[opponent];
+  // 1. Piece Difference (Heuristic)
+  const pieceDifference = score[player] - score[opponent];
 
-  // Add a significant bonus for controlling corners
+  // 2. Corner Control (Heuristic)
   const corners = [
-    board[0][0],
-    board[0][7],
-    board[7][0],
-    board[7][7],
+    [0, 0], [0, 7], [7, 0], [7, 7]
   ];
-
-  const cornerBonus = 25;
-
-  corners.forEach(corner => {
-    if (corner === player) {
-        finalScore += cornerBonus;
-    } else if (corner === opponent) {
-        finalScore -= cornerBonus;
+  let cornerBonus = 0;
+  const cornerWeight = 50; // Increased weight for corners
+  corners.forEach(([r, c]) => {
+    if (board[r][c] === player) {
+        cornerBonus += cornerWeight;
+    } else if (board[r][c] === opponent) {
+        cornerBonus -= cornerWeight;
     }
   });
+
+  // 3. Mobility (Heuristic) - Number of available moves
+  const playerMoves = getValidMoves(board, player).length;
+  const opponentMoves = getValidMoves(board, opponent).length;
+  const mobility = playerMoves - opponentMoves;
+  const mobilityWeight = 5;
+
+  // 4. Edge Control (Heuristic)
+  let edgeBonus = 0;
+  const edgeWeight = 5;
+  for (let i = 1; i < 7; i++) {
+    // Top and bottom edges
+    if (board[0][i] === player) edgeBonus += edgeWeight;
+    if (board[7][i] === player) edgeBonus += edgeWeight;
+    // Left and right edges
+    if (board[i][0] === player) edgeBonus += edgeWeight;
+    if (board[i][7] === player) edgeBonus += edgeWeight;
+
+    if (board[0][i] === opponent) edgeBonus -= edgeWeight;
+    if (board[7][i] === opponent) edgeBonus -= edgeWeight;
+    if (board[i][0] === opponent) edgeBonus -= edgeWeight;
+    if (board[i][7] === opponent) edgeBonus -= edgeWeight;
+  }
+
+  // 5. Corner Adjacent Penalty ("X-squares")
+  let xSquarePenalty = 0;
+  const xSquareWeight = 30;
+  const xSquares = [
+    [1, 1], [1, 6], [6, 1], [6, 6] // Diagonally adjacent to corners
+  ];
+  xSquares.forEach(([r, c]) => {
+      // Only apply penalty if the adjacent corner is empty
+      if (r === 1 && c === 1 && board[0][0] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+      if (r === 1 && c === 6 && board[0][7] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+      if (r === 6 && c === 1 && board[7][0] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+      if (r === 6 && c === 6 && board[7][7] === 'empty') {
+          if (board[r][c] === player) xSquarePenalty -= xSquareWeight;
+          else if (board[r][c] === opponent) xSquarePenalty += xSquareWeight;
+      }
+  });
+
+
+  // Combine heuristics into a final score
+  const finalScore = pieceDifference + cornerBonus + (mobility * mobilityWeight) + edgeBonus + xSquarePenalty;
 
   return finalScore;
 }
