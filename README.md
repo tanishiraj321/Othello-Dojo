@@ -61,6 +61,8 @@ The UI is built with React components, many of which are styled using ShadCN UI.
 - Updates in V2.0
 
 - <img width="1152" height="629" alt="image" src="https://github.com/user-attachments/assets/9b731747-9a65-4a84-acc5-eda4f7da0f0f" />
+<img width="1656" height="887" alt="image" src="https://github.com/user-attachments/assets/67bfd626-faef-483b-b845-20fe19757a67" />
+
 
 
 
