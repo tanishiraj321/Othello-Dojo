@@ -15,7 +15,6 @@ Welcome to the OthelloAI Dojo! This is a modern, interactive web application bui
 
 ## Technology Stack
 
-This project was built with the help of an AI coding assistant and utilizes a modern, type-safe technology stack.
 
 - **Framework**: [Next.js](https://nextjs.org/) (using the App Router)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
