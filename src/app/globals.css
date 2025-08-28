@@ -1,61 +1,107 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-family-body: "Space Grotesk", sans-serif;
+  --font-family-headline: "Space Grotesk", sans-serif;
+  --font-family-code: "Source Code Pro", monospace;
+  
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(9% 0 0);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(9% 0 0);
+  --color-popover: oklch(100% 0 0);
+  --color-popover-foreground: oklch(9% 0 0);
+  --color-primary: oklch(60% 0.25 0);
+  --color-primary-foreground: oklch(98% 0 0);
+  --color-secondary: oklch(15% 0 0);
+  --color-secondary-foreground: oklch(98% 0 0);
+  --color-muted: oklch(15% 0 0);
+  --color-muted-foreground: oklch(64% 0 0);
+  --color-accent: oklch(60% 0.25 0);
+  --color-accent-foreground: oklch(98% 0 0);
+  --color-destructive: oklch(60% 0.20 25);
+  --color-destructive-foreground: oklch(98% 0 0);
+  --color-border: oklch(20% 0 0);
+  --color-input: oklch(20% 0 0);
+  --color-ring: oklch(60% 0.25 0);
+  --color-chart-1: oklch(60% 0.25 0);
+  --color-chart-2: oklch(80% 0 0);
+  --color-chart-3: oklch(70% 0.15 120);
+  --color-chart-4: oklch(70% 0.15 240);
+  --color-chart-5: oklch(70% 0.15 300);
+  
+  --color-sidebar-background: oklch(4% 0 0);
+  --color-sidebar-foreground: oklch(98% 0 0);
+  --color-sidebar-primary: oklch(60% 0.25 0);
+  --color-sidebar-primary-foreground: oklch(98% 0 0);
+  --color-sidebar-accent: oklch(60% 0.25 0);
+  --color-sidebar-accent-foreground: oklch(98% 0 0);
+  --color-sidebar-border: oklch(20% 0 0);
+  --color-sidebar-ring: oklch(60% 0.25 0);
+  
+  --radius: 0.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@theme dark {
+  --color-background: oklch(4% 0 0);
+  --color-foreground: oklch(98% 0 0);
+  --color-card: oklch(8% 0 0);
+  --color-card-foreground: oklch(98% 0 0);
+  --color-popover: oklch(8% 0 0);
+  --color-popover-foreground: oklch(98% 0 0);
+  --color-primary: oklch(60% 0.25 0);
+  --color-primary-foreground: oklch(98% 0 0);
+  --color-secondary: oklch(15% 0 0);
+  --color-secondary-foreground: oklch(98% 0 0);
+  --color-muted: oklch(15% 0 0);
+  --color-muted-foreground: oklch(64% 0 0);
+  --color-accent: oklch(60% 0.25 0);
+  --color-accent-foreground: oklch(98% 0 0);
+  --color-destructive: oklch(31% 0.15 25);
+  --color-destructive-foreground: oklch(98% 0 0);
+  --color-border: oklch(20% 0 0);
+  --color-input: oklch(20% 0 0);
+  --color-ring: oklch(60% 0.25 0);
+  --color-chart-1: oklch(60% 0.25 0);
+  --color-chart-2: oklch(80% 0 0);
+}
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 100% 50%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 100% 50%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 100% 50%;
-    --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 100% 50%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 100% 50%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 100% 50%;
-    --chart-1: 0 100% 50%;
-    --chart-2: 0 0% 80%;
-  }
-}
- 
-@layer base {
   * {
-    @apply border-border;
+    border-color: theme(colors.border);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: theme(colors.background);
+    color: theme(colors.foreground);
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@layer utilities {
+  .animate-accordion-down {
+    animation: accordion-down 0.2s ease-out;
+  }
+  .animate-accordion-up {
+    animation: accordion-up 0.2s ease-out;
   }
 }
