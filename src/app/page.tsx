@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, BarChart, Info, Undo, ListCollapse, Users, Trophy, RotateCcw, Settings } from 'lucide-react';
 import type { BoardState, Player, Move } from '@/types/othello';
 import { createInitialBoard, getValidMoves, applyMove, getScore, getOpponent, boardToString, getFlipsForMove } from '@/lib/othello';
 import OthelloBoard from '@/components/othello-board';
@@ -21,6 +21,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -88,6 +91,10 @@ export default function Home() {
   const { toast } = useToast();
   
   const [flippingPieces, setFlippingPieces] = useState<Move[]>([]);
+  
+  // Advanced Undo State
+  const [showAdvancedUndo, setShowAdvancedUndo] = useState(false);
+  const [undoMoveCount, setUndoMoveCount] = useState(1);
   
   const playSound = (sound: 'place' | 'flip') => {
     // const audio = new Audio(`/sounds/${sound}.wav`);
@@ -319,38 +326,127 @@ export default function Home() {
     });
   };
 
-  const handleUndo = () => {
-    if (history.length < 2 || gameMode === 'aiVsAi') {
-      toast({ title: "Cannot Undo", description: "No moves to undo or action not allowed in AI vs AI mode.", variant: "destructive" });
+  /**
+   * Enhanced Undo Function with Multi-Move Rollback Support
+   * 
+   * This function allows users to undo multiple moves at once, providing
+   * more flexible game state management and better user experience.
+   * 
+   * @param movesToUndo - Number of moves to undo (default: auto-detect)
+   * @param forceUndo - Force undo even in AI vs AI mode (for debugging)
+   */
+  const handleUndo = (movesToUndo?: number, forceUndo: boolean = false) => {
+    // Validate undo conditions
+    if (!forceUndo && (history.length < 2 || gameMode === 'aiVsAi')) {
+      toast({ 
+        title: "Cannot Undo", 
+        description: "No moves to undo or action not allowed in AI vs AI mode.", 
+        variant: "destructive" 
+      });
       return;
     }
-  
-    // In Player vs AI, undoing your move should also undo the AI's subsequent move.
-    const movesToUndo = (userPlayer === currentPlayer) ? 1 : 2;
-    if (history.length <= movesToUndo) {
-        const initialBoard = createInitialBoard();
-        setBoard(initialBoard);
-        setCurrentPlayer('black');
-        setGameState('playing');
-        setSuggestion(null);
-        setVisualization(null);
-        setLastMove(null);
-        setHistory([{board: initialBoard, player: 'black', move: null}]);
-        setGameAnalysis(null);
-        return;
+
+    // Calculate moves to undo if not specified
+    let calculatedMovesToUndo = movesToUndo;
+    if (calculatedMovesToUndo === undefined) {
+      // Auto-detect: In Player vs AI, undoing your move should also undo the AI's subsequent move
+      calculatedMovesToUndo = (userPlayer === currentPlayer) ? 1 : 2;
+    }
+
+    // Validate move count
+    if (calculatedMovesToUndo <= 0) {
+      toast({ 
+        title: "Invalid Undo", 
+        description: "Number of moves to undo must be greater than 0.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Check if we have enough moves to undo
+    if (history.length <= calculatedMovesToUndo) {
+      // Reset to initial state if trying to undo more moves than available
+      const initialBoard = createInitialBoard();
+      setBoard(initialBoard);
+      setCurrentPlayer('black');
+      setGameState('playing');
+      setSuggestion(null);
+      setVisualization(null);
+      setLastMove(null);
+      setHistory([{board: initialBoard, player: 'black', move: null}]);
+      setGameAnalysis(null);
+      
+      toast({ 
+        title: "Game Reset", 
+        description: `Undid all ${history.length - 1} moves. Game reset to initial state.`, 
+      });
+      return;
     }
     
-    const newHistory = history.slice(0, -(movesToUndo));
+    // Perform the undo operation
+    const newHistory = history.slice(0, -(calculatedMovesToUndo));
     const lastPlayerState = newHistory[newHistory.length - 1];
 
     if (lastPlayerState) {
-        setBoard(lastPlayerState.board);
-        setCurrentPlayer(lastPlayerState.player);
-        setLastMove(lastPlayerState.move);
-        setHistory(newHistory);
-        setSuggestion(null);
-        setVisualization(null);
+      setBoard(lastPlayerState.board);
+      setCurrentPlayer(lastPlayerState.player);
+      setLastMove(lastPlayerState.move);
+      setHistory(newHistory);
+      setSuggestion(null);
+      setVisualization(null);
+      
+      // Show success message with move count
+      const moveText = calculatedMovesToUndo === 1 ? 'move' : 'moves';
+      toast({ 
+        title: "Undo Successful", 
+        description: `Undid ${calculatedMovesToUndo} ${moveText}.`, 
+      });
     }
+  };
+
+  /**
+   * Advanced Undo with Custom Move Count
+   * 
+   * This function allows users to specify exactly how many moves to undo,
+   * providing granular control over the game state.
+   */
+  const handleAdvancedUndo = (moveCount: number) => {
+    if (moveCount <= 0) {
+      toast({ 
+        title: "Invalid Input", 
+        description: "Please enter a positive number of moves to undo.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (moveCount >= history.length) {
+      toast({ 
+        title: "Too Many Moves", 
+        description: `Cannot undo ${moveCount} moves. Only ${history.length - 1} moves available.`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    handleUndo(moveCount, true);
+  };
+
+  /**
+   * Undo All Moves - Reset to Game Start
+   */
+  const handleUndoAll = () => {
+    if (history.length <= 1) {
+      toast({ 
+        title: "No Moves to Undo", 
+        description: "Game is already at the initial state.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const moveCount = history.length - 1;
+    handleUndo(moveCount, true);
   };
 
   const aiPlayer = useMemo(() => {
@@ -409,6 +505,8 @@ export default function Home() {
   );
 
   const canUndo = gameState === 'playing' && history.length > 1 && !aiIsThinking && gameMode === 'playerVsAi' && currentPlayer === userPlayer;
+  const canAdvancedUndo = gameState === 'playing' && history.length > 1 && !aiIsThinking;
+  const availableMoves = history.length - 1;
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8 font-body">
@@ -491,11 +589,81 @@ export default function Home() {
                     <ListCollapse className="w-5 h-5 text-primary" />
                     Move History
                 </CardTitle>
-                <Button variant="outline" size="sm" onClick={handleUndo} disabled={!canUndo}>
-                    <Undo className="mr-2 h-4 w-4" /> Undo
-                </Button>
+                <div className="flex gap-2">
+                    {/* Basic Undo Button */}
+                    <Button variant="outline" size="sm" onClick={() => handleUndo()} disabled={!canUndo}>
+                        <Undo className="mr-2 h-4 w-4" /> Undo
+                    </Button>
+                    
+                    {/* Advanced Undo Popover */}
+                    <Popover open={showAdvancedUndo} onOpenChange={setShowAdvancedUndo}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={!canAdvancedUndo}>
+                                <Settings className="mr-2 h-4 w-4" /> Advanced
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80" align="end">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Advanced Undo Options</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        Available moves to undo: {availableMoves}
+                                    </p>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <Label htmlFor="undo-count">Number of moves to undo:</Label>
+                                    <Input
+                                        id="undo-count"
+                                        type="number"
+                                        min="1"
+                                        max={availableMoves}
+                                        value={undoMoveCount}
+                                        onChange={(e) => setUndoMoveCount(Math.max(1, Math.min(availableMoves, parseInt(e.target.value) || 1)))}
+                                        className="w-full"
+                                    />
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <Button 
+                                        size="sm" 
+                                        onClick={() => {
+                                            handleAdvancedUndo(undoMoveCount);
+                                            setShowAdvancedUndo(false);
+                                        }}
+                                        className="flex-1"
+                                    >
+                                        Undo {undoMoveCount} {undoMoveCount === 1 ? 'Move' : 'Moves'}
+                                    </Button>
+                                    
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => {
+                                            handleUndoAll();
+                                            setShowAdvancedUndo(false);
+                                        }}
+                                        className="flex-1"
+                                    >
+                                        <RotateCcw className="mr-2 h-4 w-4" />
+                                        Undo All
+                                    </Button>
+                                </div>
+                                
+                                <div className="text-xs text-muted-foreground">
+                                    <p>• Undo specific number of moves</p>
+                                    <p>• Undo all moves to reset game</p>
+                                    <p>• Works in all game modes</p>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
             </CardHeader>
             <CardContent>
+                <div className="mb-3 text-xs text-muted-foreground">
+                    Total moves: {availableMoves} | Current player: {currentPlayer}
+                </div>
                 <ScrollArea className="h-48 w-full">
                     <div className="space-y-2 font-code text-sm">
                         {history.slice(1).map((entry, index) => (
