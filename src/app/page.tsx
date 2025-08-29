@@ -22,62 +22,29 @@ import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { saveGame } from '@/app/actions/gameActions'; // Import the server action
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-/**
- * A custom hook to manage state that persists in localStorage.
- * This allows the game state to be saved between browser sessions.
- * @param key The key for localStorage.
- * @param defaultValue The initial value if nothing is in localStorage.
- * @returns A state and a setState function, similar to useState.
- */
-const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(() => {
-    // We can only access window/localStorage on the client side.
-    if (typeof window === 'undefined') {
-      return defaultValue;
-    }
-    try {
-      const storedValue = window.localStorage.getItem(key);
-      return storedValue ? JSON.parse(storedValue) : defaultValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return defaultValue;
-    }
-  });
-
-  // Effect to update localStorage whenever the state changes.
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
-    }
-  }, [key, state]);
-
-  return [state, setState];
-};
 
 /**
  * The main component for the OthelloAI Dojo application.
  * It manages all game state, logic, and renders the UI components.
  */
 export default function Home() {
-  // Core Game State
-  const [board, setBoard] = usePersistentState<BoardState>('othello-board', createInitialBoard());
-  const [currentPlayer, setCurrentPlayer] = usePersistentState<Player>('othello-currentPlayer', 'black');
-  const [userPlayer, setUserPlayer] = usePersistentState<Player | null>('othello-userPlayer', 'black');
-  const [score, setScore] = usePersistentState('othello-score', { black: 2, white: 2 });
-  const [gameState, setGameState] = usePersistentState<'menu' | 'playing' | 'gameOver'>('othello-gameState', 'menu');
-  const [gameMode, setGameMode] = usePersistentState<'playerVsAi' | 'aiVsAi'>('othello-gameMode', 'playerVsAi');
-  const [history, setHistory] = usePersistentState<{board: BoardState, player: Player, move: Move | null}[]>('othello-history', []);
-  
-  // Difficulty State
-  const [difficulty, setDifficulty] = usePersistentState('othello-difficulty', 1);
-  const [ai1Difficulty, setAi1Difficulty] = usePersistentState('othello-ai1Difficulty', 1);
-  const [ai2Difficulty, setAi2Difficulty] = usePersistentState('othello-ai2Difficulty', 1);
-  
+  // Core Game State - Migrated from usePersistentState to useState
+  const [board, setBoard] = useState<BoardState>(createInitialBoard());
+  const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
+  const [userPlayer, setUserPlayer] = useState<Player | null>('black');
+  const [score, setScore] = useState({ black: 2, white: 2 });
+  const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
+  const [gameMode, setGameMode] = useState<'playerVsAi' | 'aiVsAi'>('playerVsAi');
+  const [history, setHistory] = useState<{board: BoardState, player: Player, move: Move | null}[]>([]);
+ 
+  // Difficulty State - Migrated from usePersistentState to useState
+  const [difficulty, setDifficulty] = useState(1);
+  const [ai1Difficulty, setAi1Difficulty] = useState(1);
+  const [ai2Difficulty, setAi2Difficulty] = useState(1);
+ 
   // UI & Interaction State
   const [validMoves, setValidMoves] = useState<Move[]>([]);
   const [aiIsThinking, setAiIsThinking] = useState(false);
@@ -93,7 +60,7 @@ export default function Home() {
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [gameAnalysis, setGameAnalysis] = useState<AnalyzeGameOutput | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
-  
+ 
   // Mock training data for chart visualization
   const [trainingData, setTrainingData] = useState([
     { games: 10, aiWins: 4, opponentWins: 6 },
@@ -106,7 +73,7 @@ export default function Home() {
   // Advanced Undo State
   const [showAdvancedUndo, setShowAdvancedUndo] = useState(false);
   const [undoMoveCount, setUndoMoveCount] = useState(1);
-  
+ 
   const playSound = (sound: 'place' | 'flip') => {
     // Sound logic can be re-enabled here if needed.
     // const audio = new Audio(`/sounds/${sound}.wav`);
@@ -114,9 +81,9 @@ export default function Home() {
   };
 
   /**
-   * Recalculates valid moves and scores, and checks for game-over conditions.
-   * This is called whenever the board or current player changes.
-   */
+    * Recalculates valid moves and scores, and checks for game-over conditions.
+    * This is called whenever the board or current player changes.
+    */
   const updateGameData = useCallback((currentBoard: BoardState, player: Player) => {
     const newValidMoves = getValidMoves(currentBoard, player);
     setValidMoves(newValidMoves);
@@ -126,10 +93,10 @@ export default function Home() {
     if (newValidMoves.length === 0) {
       const opponent = getOpponent(player);
       const opponentMoves = getValidMoves(currentBoard, opponent);
-      
+     
       // If the opponent also has no moves, the game is over.
       if (opponentMoves.length === 0) {
-        setGameState('gameOver');
+        setGameState('gameOver'); // This will trigger the saveGame effect
       } else {
         // Otherwise, skip the current player's turn.
         toast({
@@ -139,7 +106,7 @@ export default function Home() {
         setCurrentPlayer(opponent);
       }
     }
-  }, [toast, setScore, setGameState, setCurrentPlayer]);
+  }, [toast]); // Removed setScore, setGameState, setCurrentPlayer as they are stable
 
   // Effect to update game data whenever the board or player changes during a game.
   useEffect(() => {
@@ -147,17 +114,64 @@ export default function Home() {
       updateGameData(board, currentPlayer);
     }
   }, [board, currentPlayer, gameState, updateGameData]);
-  
+
   /**
-   * Processes a player's move, updating the board, history, and current player.
-   * @param move The move to apply to the board.
+   * Effect to save the completed game to MongoDB when the game state changes to 'gameOver'.
    */
+  useEffect(() => {
+    if (gameState === 'gameOver') {
+      const handleSaveGame = async () => {
+        // 1. Determine the winner from the final score
+        const finalScore = getScore(board);
+        const winner = finalScore.black > finalScore.white ? 'black' : finalScore.white > finalScore.black ? 'white' : 'draw';
+  
+        // 2. Format the move history according to the schema (remove initial state)
+        const formattedMoveHistory = history.slice(1).map(({ player, move }) => ({
+          player,
+          move: move ? { row: move.row, col: move.col } : null,
+        }));
+
+        // 3. Construct the game data payload for the server action
+        const gameData = {
+          gameMode,
+          userPlayer,
+          winner,
+          finalScore: finalScore,
+          moveHistory: formattedMoveHistory,
+          ...(gameMode === 'playerVsAi' && { difficulty }),
+          ...(gameMode === 'aiVsAi' && { aiDifficulties: { ai1: ai1Difficulty, ai2: ai2Difficulty } }),
+        };
+
+        // 4. Call the server action and show a toast notification
+        const result = await saveGame(gameData);
+        if (result.success) {
+          toast({
+            title: "Game Over!",
+            description: `Winner: ${winner}. Game saved to database.`,
+          });
+        } else {
+          toast({
+            title: "Save Failed",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+      };
+  
+      handleSaveGame();
+    }
+  }, [gameState, board, score, history, gameMode, userPlayer, difficulty, ai1Difficulty, ai2Difficulty, toast]);
+ 
+  /**
+    * Processes a player's move, updating the board, history, and current player.
+    * @param move The move to apply to the board.
+    */
   const handlePlayerMove = async (move: Move) => {
     const boardBeforeMove = board;
-    
+   
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
     const flipped = getFlipsForMove(board, currentPlayer, move.row, move.col);
-    
+   
     // Trigger piece flipping animation
     setFlippingPieces(flipped.map(p => ({...p})));
     setTimeout(() => setFlippingPieces([]), 500);
@@ -175,21 +189,21 @@ export default function Home() {
   }
 
   /**
-   * Handles clicks on the Othello board cells.
-   * @param move The cell coordinates that were clicked.
-   */
+    * Handles clicks on the Othello board cells.
+    * @param move The cell coordinates that were clicked.
+    */
   const handleCellClick = (move: Move) => {
     if (gameState !== 'playing' || currentPlayer !== userPlayer || aiIsThinking || gameMode === 'aiVsAi') return;
-    
+   
     const isMoveValid = validMoves.some(m => m.row === move.row && m.col === move.col);
     if (!isMoveValid) return;
 
     handlePlayerMove(move);
   };
-  
+ 
   /**
-   * Resets the entire game state to its initial default values.
-   */
+    * Resets the entire game state to its initial default values.
+    */
   const resetGame = () => {
     const initialBoard = createInitialBoard();
     setBoard(initialBoard);
@@ -218,7 +232,7 @@ export default function Home() {
 
   const startPlayerVsAiGame = (player: Player) => startGame('playerVsAi', player);
   const startAiVsAiGame = () => startGame('aiVsAi', null);
-  
+ 
   const handleSuggestMove = () => {
     if (gameMode === 'aiVsAi' || !userPlayer) return;
     setSuggestionLoading(true);
@@ -268,7 +282,7 @@ export default function Home() {
           score: newScore[opponent] - score[opponent]
         }
       });
-      
+     
       const response = await visualizeAiDecision({
         boardState: boardToString(board),
         possibleMoves: possibleMoves,
@@ -289,7 +303,7 @@ export default function Home() {
       setVisualizationLoading(false);
     }
   };
-  
+ 
   const handleReviewGame = async () => {
     if (history.length <= 1) return;
     setAnalysisLoading(true);
@@ -347,16 +361,16 @@ export default function Home() {
   // MERGE CONFLICT RESOLVED HERE
   // The 'path-2' implementation was chosen as it is more robust, feature-complete,
   // and fixes a bug where the wrong player was set after an undo.
-  
+ 
   /**
-   * Enhanced Undo Function with Multi-Move Rollback Support
-   *
-   * This function allows users to undo multiple moves at once, providing
-   * more flexible game state management and better user experience.
-   *
-   * @param movesToUndo - Number of moves to undo (default: auto-detect)
-   * @param forceUndo - Force undo even in AI vs AI mode (for debugging)
-   */
+    * Enhanced Undo Function with Multi-Move Rollback Support
+    *
+    * This function allows users to undo multiple moves at once, providing
+    * more flexible game state management and better user experience.
+    *
+    * @param movesToUndo - Number of moves to undo (default: auto-detect)
+    * @param forceUndo - Force undo even in AI vs AI mode (for debugging)
+    */
   const handleUndo = (movesToUndo?: number, forceUndo: boolean = false) => {
     // Validate undo conditions
     if (!forceUndo && (history.length < 2 || gameMode === 'aiVsAi')) {
@@ -397,14 +411,14 @@ export default function Home() {
       setLastMove(null);
       setHistory([{board: initialBoard, player: 'black', move: null}]);
       setGameAnalysis(null);
-      
+     
       toast({ 
         title: "Game Reset", 
         description: `Undid all ${history.length - 1} moves. Game reset to initial state.`, 
       });
       return;
     }
-    
+   
     // Perform the undo operation
     const newHistory = history.slice(0, -(calculatedMovesToUndo));
     const lastPlayerState = newHistory[newHistory.length - 1];
@@ -417,7 +431,7 @@ export default function Home() {
       setHistory(newHistory);
       setSuggestion(null);
       setVisualization(null);
-      
+     
       // Show success message with move count
       const moveText = calculatedMovesToUndo === 1 ? 'move' : 'moves';
       toast({ 
@@ -428,11 +442,11 @@ export default function Home() {
   };
 
   /**
-   * Advanced Undo with Custom Move Count
-   *
-   * This function allows users to specify exactly how many moves to undo,
-   * providing granular control over the game state.
-   */
+    * Advanced Undo with Custom Move Count
+    *
+    * This function allows users to specify exactly how many moves to undo,
+    * providing granular control over the game state.
+    */
   const handleAdvancedUndo = (moveCount: number) => {
     if (moveCount <= 0) {
       toast({ 
@@ -456,8 +470,8 @@ export default function Home() {
   };
 
   /**
-   * Undo All Moves - Reset to Game Start
-   */
+    * Undo All Moves - Reset to Game Start
+    */
   const handleUndoAll = () => {
     if (history.length <= 1) {
       toast({ 
@@ -481,12 +495,12 @@ export default function Home() {
   }, [userPlayer, gameMode]);
 
   /**
-   * This effect is the main game loop for the AI.
-   * It triggers whenever it's the AI's turn to move in a 'playing' game state.
-   */
+    * This effect is the main game loop for the AI.
+    * It triggers whenever it's the AI's turn to move in a 'playing' game state.
+    */
   useEffect(() => {
     if (gameState !== 'playing' || aiIsThinking) return;
-  
+ 
     const handleAiMove = (aiDifficulty: number, aiColor: Player) => {
         setAiIsThinking(true);
         // Add a delay to simulate thinking and improve UX
@@ -494,12 +508,12 @@ export default function Home() {
           const moves = getValidMoves(board, aiColor);
           if (moves.length > 0) {
             const { move: bestMove } = minimax(board, aiDifficulty, true, aiColor);
-  
+ 
             if(bestMove){
                 const flipped = getFlipsForMove(board, aiColor, bestMove.row, bestMove.col);
                 setFlippingPieces(flipped.map(p => ({...p})));
                 setTimeout(() => setFlippingPieces([]), 500);
-                
+               
                 playSound('place');
                 if (flipped.length > 0) {
                     setTimeout(() => playSound('flip'), 200);
@@ -515,7 +529,7 @@ export default function Home() {
           setAiIsThinking(false);
         }, 1000); // 1-second delay for AI move
     }
-  
+ 
     // Determine if an AI needs to make a move
     if (gameMode === 'playerVsAi' && currentPlayer === aiPlayer) {
       handleAiMove(difficulty, aiPlayer);
@@ -523,8 +537,8 @@ export default function Home() {
       const currentAiDifficulty = currentPlayer === 'black' ? ai1Difficulty : ai2Difficulty;
       handleAiMove(currentAiDifficulty, currentPlayer);
     }
-  
-  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, userPlayer, difficulty, gameMode, ai1Difficulty, ai2Difficulty, setBoard, setCurrentPlayer, setHistory, setLastMove, setFlippingPieces]);
+ 
+  }, [gameState, currentPlayer, aiPlayer, aiIsThinking, board, difficulty, gameMode, ai1Difficulty, ai2Difficulty]);
 
   // JSX for displaying the AI's move suggestion
   const displayedSuggestion = suggestion && (
@@ -556,7 +570,7 @@ export default function Home() {
           </Link>
         </div>
       </header>
-      
+     
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto">
         {/* Left Column: Game Info & AI Panel */}
         <div className="lg:col-span-3 space-y-6">
@@ -601,7 +615,7 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-        
+       
         {/* Center Column: Othello Board */}
         <div className="lg:col-span-6">
           <OthelloBoard
@@ -614,7 +628,7 @@ export default function Home() {
             flippingPieces={flippingPieces}
           />
         </div>
-        
+       
         {/* Right Column: Move History & Win-Rate Chart */}
         <div className="lg:col-span-3 space-y-6">
             <Card>
@@ -628,7 +642,7 @@ export default function Home() {
                       <Button variant="outline" size="sm" onClick={() => handleUndo()} disabled={!canUndo}>
                           <Undo className="mr-2 h-4 w-4" /> Undo
                       </Button>
-                      
+                     
                       {/* Advanced Undo Popover */}
                       <Popover open={showAdvancedUndo} onOpenChange={setShowAdvancedUndo}>
                           <PopoverTrigger asChild>
@@ -644,7 +658,7 @@ export default function Home() {
                                           Available moves to undo: {availableMoves}
                                       </p>
                                   </div>
-                                  
+                                 
                                   <div className="space-y-2">
                                       <Label htmlFor="undo-count">Number of moves to undo:</Label>
                                       <Input
@@ -657,7 +671,7 @@ export default function Home() {
                                           className="w-full"
                                       />
                                   </div>
-                                  
+                                 
                                   <div className="flex gap-2">
                                       <Button 
                                           size="sm" 
@@ -669,7 +683,7 @@ export default function Home() {
                                       >
                                           Undo {undoMoveCount} {undoMoveCount === 1 ? 'Move' : 'Moves'}
                                       </Button>
-                                      
+                                     
                                       <Button 
                                           variant="outline" 
                                           size="sm" 
@@ -683,7 +697,7 @@ export default function Home() {
                                           Undo All
                                       </Button>
                                   </div>
-                                  
+                                 
                                   <div className="text-xs text-muted-foreground">
                                       <p>• Undo specific number of moves</p>
                                       <p>• Undo all moves to reset game</p>
@@ -701,7 +715,7 @@ export default function Home() {
                   <ScrollArea className="h-48 w-full">
                       <div className="space-y-2 font-code text-sm">
                           {history.slice(1).map((entry, index) => (
-                               <div key={index} className="flex gap-4 p-1 rounded-md bg-muted/50 items-center">
+                              <div key={index} className="flex gap-4 p-1 rounded-md bg-muted/50 items-center">
                                   <span className="font-bold w-6 text-right">{index + 1}.</span>
                                   <div className="flex items-center gap-1">
                                       <div className={
