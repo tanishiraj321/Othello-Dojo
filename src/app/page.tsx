@@ -321,37 +321,59 @@ export default function Home() {
 
   const handleUndo = () => {
     if (history.length < 2 || gameMode === 'aiVsAi') {
-      toast({ title: "Cannot Undo", description: "No moves to undo or action not allowed in AI vs AI mode.", variant: "destructive" });
+      toast({ 
+        title: "Cannot Undo", 
+        description: "No moves to undo or action not allowed in AI vs AI mode.", 
+        variant: "destructive" 
+      });
       return;
     }
-  
-    // In Player vs AI, undoing your move should also undo the AI's subsequent move.
+
     const movesToUndo = (userPlayer === currentPlayer) ? 1 : 2;
-    if (history.length <= movesToUndo) {
-        const initialBoard = createInitialBoard();
-        setBoard(initialBoard);
-        setCurrentPlayer('black');
-        setGameState('playing');
-        setSuggestion(null);
-        setVisualization(null);
-        setLastMove(null);
-        setHistory([{board: initialBoard, player: 'black', move: null}]);
-        setGameAnalysis(null);
-        return;
+    
+    // Fix: Change <= to < to allow undo when we have exactly enough moves
+    if (history.length < movesToUndo) {
+      toast({ 
+        title: "Cannot Undo", 
+        description: "Not enough moves to undo.", 
+        variant: "destructive" 
+      });
+      return;
     }
     
-    const newHistory = history.slice(0, -(movesToUndo));
+    // If we'd undo back to the beginning, reset to initial state
+    if (history.length - movesToUndo <= 0) {
+      const initialBoard = createInitialBoard();
+      setBoard(initialBoard);
+      setCurrentPlayer('black');
+      setGameState('playing');
+      setSuggestion(null);
+      setVisualization(null);
+      setLastMove(null);
+      setHistory([{board: initialBoard, player: 'black', move: null}]);
+      setGameAnalysis(null);
+      return;
+    }
+    
+    const newHistory = history.slice(0, -movesToUndo);
     const lastPlayerState = newHistory[newHistory.length - 1];
 
     if (lastPlayerState) {
-        setBoard(lastPlayerState.board);
-        setCurrentPlayer(lastPlayerState.player);
-        setLastMove(lastPlayerState.move);
-        setHistory(newHistory);
-        setSuggestion(null);
-        setVisualization(null);
+      setBoard(lastPlayerState.board);
+      setCurrentPlayer(getOpponent(lastPlayerState.player));
+      setLastMove(lastPlayerState.move);
+      setHistory(newHistory);
+      setSuggestion(null);
+      setVisualization(null);
+      
+      toast({ 
+        title: "Move Undone", 
+        description: `Undid ${movesToUndo} move(s)`, 
+        variant: "default" 
+      });
     }
   };
+
 
   const aiPlayer = useMemo(() => {
     if (gameMode === 'playerVsAi' && userPlayer) {
