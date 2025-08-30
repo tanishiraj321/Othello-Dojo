@@ -1,3 +1,9 @@
+/**
+ * @file page.tsx
+ * @description The main component for the OthelloAI Dojo application.
+ * It manages all game state and logic, handles user interactions, and orchestrates
+ * the rendering of all UI components and server actions for game persistence.
+ */
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -22,16 +28,13 @@ import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { saveGame } from '@/app/actions/gameActions'; // Import the server action
+// Import the corrected, individual server actions for game persistence.
+import { createGame, addMoveToGame, concludeGame } from '@/app/actions/gameActions';
 
 const rowLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
-/**
- * The main component for the OthelloAI Dojo application.
- * It manages all game state, logic, and renders the UI components.
- */
 export default function Home() {
-  // Core Game State - Migrated from usePersistentState to useState
+  // Core Game State
   const [board, setBoard] = useState<BoardState>(createInitialBoard());
   const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
   const [userPlayer, setUserPlayer] = useState<Player | null>('black');
@@ -40,7 +43,13 @@ export default function Home() {
   const [gameMode, setGameMode] = useState<'playerVsAi' | 'aiVsAi'>('playerVsAi');
   const [history, setHistory] = useState<{ board: BoardState; player: Player; move: Move | null }[]>([]);
 
-  // Difficulty State - Migrated from usePersistentState to useState
+  /**
+   * @state {string | null} gameId - The MongoDB document _id for the current game session.
+   * This is crucial for persisting moves and concluding the game. It is null if no game is active.
+   */
+  const [gameId, setGameId] = useState<string | null>(null);
+
+  // Difficulty State
   const [difficulty, setDifficulty] = useState(1);
   const [ai1Difficulty, setAi1Difficulty] = useState(1);
   const [ai2Difficulty, setAi2Difficulty] = useState(1);
@@ -76,13 +85,14 @@ export default function Home() {
 
   const playSound = (sound: 'place' | 'flip') => {
     // Sound logic can be re-enabled here if needed.
-    // const audio = new Audio(`/sounds/${sound}.wav`);
-    // audio.play().catch(e => console.error("Error playing sound:", e));
   };
 
   /**
-    * Recalculates valid moves and scores, and checks for game-over conditions.
-    */
+   * Recalculates valid moves for the current player, updates the score,
+   * and checks for game-over conditions (no valid moves for either player).
+   * @param {BoardState} currentBoard - The current state of the game board.
+   * @param {Player} player - The player whose turn it is.
+   */
   const updateGameData = useCallback((currentBoard: BoardState, player: Player) => {
     const newValidMoves = getValidMoves(currentBoard, player);
     setValidMoves(newValidMoves);
@@ -93,7 +103,7 @@ export default function Home() {
       const opponentMoves = getValidMoves(currentBoard, opponent);
 
       if (opponentMoves.length === 0) {
-        setGameState('gameOver'); // This change will trigger the saveGame effect
+        setGameState('gameOver');
       } else {
         toast({
           title: "Turn Skipped",
@@ -104,7 +114,10 @@ export default function Home() {
     }
   }, [toast]);
 
-  // Effect to update game data whenever the board or player changes during a game.
+  /**
+   * Effect to update game data (valid moves, score) whenever the board or
+   * current player changes during an active game.
+   */
   useEffect(() => {
     if (gameState === 'playing') {
       updateGameData(board, currentPlayer);
@@ -112,51 +125,39 @@ export default function Home() {
   }, [board, currentPlayer, gameState, updateGameData]);
 
   /**
-   * Effect to save the completed game to MongoDB when the game state changes to 'gameOver'.
+   * Effect to trigger the final save operation when the game concludes.
+   * This calls the `concludeGame` server action to update the game document
+   * with the final status, winner, and score.
    */
   useEffect(() => {
     if (gameState === 'gameOver') {
-      const handleSaveGame = async () => {
+      const handleConcludeGame = async () => {
+        if (!gameId) {
+          console.error("Game Over: Cannot conclude game without a valid gameId.");
+          return;
+        }
+
         const finalScore = getScore(board);
         const winner = finalScore.black > finalScore.white ? 'black' : finalScore.white > finalScore.black ? 'white' : 'draw';
+        const gameResult = { winner, finalScore };
 
-        const formattedMoveHistory = history.slice(1).map(({ player, move }) => ({
-          player,
-          move: move ? { row: move.row, col: move.col } : null,
-        }));
+        const result = await concludeGame(gameId, gameResult);
 
-        const gameData = {
-          gameMode,
-          userPlayer,
-          winner,
-          finalScore,
-          moveHistory: formattedMoveHistory,
-          ...(gameMode === 'playerVsAi' && { difficulty }),
-          ...(gameMode === 'aiVsAi' && { aiDifficulties: { ai1: ai1Difficulty, ai2: ai2Difficulty } }),
-        };
-
-        const result = await saveGame(gameData);
         if (result.success) {
-          toast({
-            title: "Game Over!",
-            description: `Winner: ${winner}. Game saved to database.`,
-          });
+          toast({ title: "Game Over!", description: `Winner: ${winner}. Game result saved.` });
         } else {
-          toast({
-            title: "Save Failed",
-            description: result.message,
-            variant: "destructive",
-          });
+          toast({ title: "Save Failed", description: result.message, variant: "destructive" });
         }
       };
-
-      handleSaveGame();
+      handleConcludeGame();
     }
-  }, [gameState, board, history, gameMode, userPlayer, difficulty, ai1Difficulty, ai2Difficulty, toast]);
+  }, [gameState, board, gameId, toast]);
 
   /**
-    * Processes a player's move, updating the board, history, and current player.
-    */
+   * Processes a player or AI move. Updates the local board state and history,
+   * and then calls the `addMoveToGame` server action to persist the move.
+   * @param {Move} move - The move to be executed.
+   */
   const handlePlayerMove = async (move: Move) => {
     const boardBeforeMove = board;
     const newBoard = applyMove(board, currentPlayer, move.row, move.col);
@@ -175,11 +176,21 @@ export default function Home() {
     setLastMove(move);
     setCurrentPlayer(getOpponent(currentPlayer));
     setSuggestion(null);
+
+    // Persist the move to the database if a game is active.
+    if (gameId) {
+      const moveData = { player: currentPlayer, move };
+      const result = await addMoveToGame(gameId, moveData);
+      if (!result.success) {
+        toast({ title: "Save Error", description: "The last move could not be saved.", variant: "destructive" });
+      }
+    }
   };
 
   /**
-    * Handles clicks on the Othello board cells.
-    */
+   * Handles user clicks on the Othello board cells, validating and executing the move.
+   * @param {Move} move - The cell coordinates that were clicked.
+   */
   const handleCellClick = (move: Move) => {
     if (gameState !== 'playing' || currentPlayer !== userPlayer || aiIsThinking || gameMode === 'aiVsAi') return;
     const isMoveValid = validMoves.some(m => m.row === move.row && m.col === move.col);
@@ -189,8 +200,9 @@ export default function Home() {
   };
 
   /**
-    * Resets the entire game state to its initial default values.
-    */
+   * Resets the entire game state to its initial default values.
+   * Also clears the `gameId`, effectively ending the previous session.
+   */
   const resetGame = () => {
     const initialBoard = createInitialBoard();
     setBoard(initialBoard);
@@ -201,24 +213,49 @@ export default function Home() {
     setLastMove(null);
     setHistory([{ board: initialBoard, player: 'black', move: null }]);
     setGameAnalysis(null);
+    setGameId(null);
   };
 
-  const startGame = (mode: 'playerVsAi' | 'aiVsAi', player: Player | null) => {
+  /**
+   * Initializes a new game session. Resets local state and calls the `createGame`
+   * server action to create a new document in the database, storing its ID.
+   * @param {'playerVsAi' | 'aiVsAi'} mode - The selected game mode.
+   * @param {Player | null} player - The color the user chose to play as, if applicable.
+   */
+  const startGame = async (mode: 'playerVsAi' | 'aiVsAi', player: Player | null) => {
+    // Reset local state for a new game
     const initialBoard = createInitialBoard();
     setBoard(initialBoard);
     setCurrentPlayer('black');
     setGameState('playing');
+    setHistory([{ board: initialBoard, player: 'black', move: null }]);
+    setGameAnalysis(null);
     setSuggestion(null);
     setVisualization(null);
     setLastMove(null);
-    setHistory([{ board: initialBoard, player: 'black', move: null }]);
-    setGameAnalysis(null);
     setUserPlayer(player);
     setGameMode(mode);
+
+    // Prepare settings for the new game document.
+    const gameSettings = {
+      gameMode: mode,
+      userPlayer: player,
+      ...(mode === 'playerVsAi' && { difficulty }),
+      ...(mode === 'aiVsAi' && { aiDifficulties: { ai1: ai1Difficulty, ai2: ai2Difficulty } }),
+    };
+
+    // Create the game document in the database.
+    const result = await createGame(gameSettings);
+    if (result.success && result.gameId) {
+      setGameId(result.gameId); // Store the new game's ID.
+      toast({ title: "New Game Started", description: "Game session is being saved." });
+    } else {
+      toast({ title: "Database Error", description: "Could not create a new game record.", variant: "destructive" });
+    }
   };
 
-  const startPlayerVsAiGame = (player: Player) => startGame('playerVsAi', player);
-  const startAiVsAiGame = () => startGame('aiVsAi', null);
+  const startPlayerVsAiGame = async (player: Player) => startGame('playerVsAi', player);
+  const startAiVsAiGame = async () => startGame('aiVsAi', null);
 
   const handleSuggestMove = () => {
     if (gameMode === 'aiVsAi' || !userPlayer) return;
