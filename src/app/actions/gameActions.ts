@@ -5,38 +5,8 @@ import { getCollection } from '@/lib/database';
 import type { Player } from '@/types/othello';
 import { ObjectId } from 'mongodb';
 
-// Define the shape of a single move for validation
-const MoveSchema = z.object({
-  row: z.number().int().min(0).max(7),
-  col: z.number().int().min(0).max(7),
-});
-
-const MoveHistoryItemSchema = z.object({
-  player: z.enum(['black', 'white']),
-  move: MoveSchema.nullable(),
-});
-
-// A more flexible schema for a game document in MongoDB
-const GameDBSchema = z.object({
-  gameMode: z.enum(['playerVsAi', 'aiVsAi']),
-  userPlayer: z.enum(['black', 'white']).nullable(),
-  difficulty: z.number().optional(),
-  aiDifficulties: z.object({
-    ai1: z.number(),
-    ai2: z.number(),
-  }).optional(),
-  moveHistory: z.array(MoveHistoryItemSchema),
-  status: z.enum(['in_progress', 'completed', 'abandoned']),
-  winner: z.enum(['black', 'white', 'draw']).optional().nullable(),
-  finalScore: z.object({
-    black: z.number().int(),
-    white: z.number().int(),
-  }).optional().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-type GameDocument = z.infer<typeof GameDBSchema>;
+// Import the schemas from the new single source of truth.
+import { GameDBSchema, MoveHistoryItemSchema, type GameDocument } from '@/lib/models'; // Assuming 'models.ts' is in 'lib' or a similar path. wrong name inported fixed 
 
 /**
  * Creates a new game record in the database.
@@ -55,6 +25,7 @@ export async function createGame(
       updatedAt: new Date(),
     };
 
+    // The GameDBSchema is now imported, ensuring consistency.
     const validatedData = GameDBSchema.omit({ _id: true }).parse(newGameData);
     const result = await gamesCollection.insertOne(validatedData);
     
@@ -101,6 +72,7 @@ export async function addMoveToGame(gameId: string, moveData: z.infer<typeof Mov
     return { success: false, message: 'Invalid game ID.' };
   }
   try {
+    // The MoveHistoryItemSchema is now imported, ensuring consistency.
     const validatedMove = MoveHistoryItemSchema.parse(moveData);
     const gamesCollection = await getCollection('games');
     
