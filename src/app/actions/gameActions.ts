@@ -6,7 +6,7 @@ import type { Player } from '@/types/othello';
 import { ObjectId } from 'mongodb';
 
 // Import the schemas from the new single source of truth.
-import { GameDBSchema, MoveHistoryItemSchema, type GameDocument } from '@/lib/model'; // Assuming 'model.ts' is in 'lib' or a similar path.
+import { GameDBSchema, MoveHistoryItemSchema, type GameDocument } from '@/lib/models'; // Assuming 'models.ts' is in 'lib' or a similar path. wrong name inported fixed 
 
 /**
  * Creates a new game record in the database.
